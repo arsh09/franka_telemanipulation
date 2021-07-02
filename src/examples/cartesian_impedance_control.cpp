@@ -5,7 +5,8 @@
 #include <functional>
 #include <iostream>
 
-#include <Eigen/Dense>
+// #include <Eigen/Dense>
+#include <eigen3/Eigen/Dense>
 
 #include <franka/duration.h>
 #include <franka/exception.h>
