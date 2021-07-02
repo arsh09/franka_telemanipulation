@@ -1,1 +1,0 @@
-/usr/bin/x86_64-linux-gnu-g++-7  -g  -rdynamic CMakeFiles/hello_world.dir/src/main.cpp.o  -o hello_world -Wl,-rpath,/opt/ros/melodic/lib /opt/ros/melodic/lib/libfranka.so.0.8.0 

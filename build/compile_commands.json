@@ -1,7 +1,0 @@
-[
-{
-  "directory": "/home/arsh/Documents/panda_project/build",
-  "command": "/usr/bin/x86_64-linux-gnu-g++-7   -isystem /opt/ros/melodic/include/libfranka  -g   -std=gnu++14 -o CMakeFiles/hello_world.dir/src/main.cpp.o -c /home/arsh/Documents/panda_project/src/main.cpp",
-  "file": "/home/arsh/Documents/panda_project/src/main.cpp"
-}
-]
