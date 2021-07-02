@@ -24,6 +24,10 @@ target_link_libraries(echo_robot_state
   ${Franka_LIBRARIES}
 )
 
+add_executable(print_joint_poses src/examples/print_joint_poses.cpp)
+target_link_libraries(print_joint_poses
+  ${Franka_LIBRARIES}
+)
 
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})
