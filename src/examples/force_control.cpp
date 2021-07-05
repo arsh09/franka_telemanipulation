@@ -5,7 +5,7 @@
 #include <functional>
 #include <iostream>
 
-#include <Eigen/Core>
+#include <eigen3/Eigen/Core>
 
 #include <franka/duration.h>
 #include <franka/exception.h>
