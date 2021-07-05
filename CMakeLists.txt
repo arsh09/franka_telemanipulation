@@ -11,6 +11,7 @@ enable_testing()
 find_package(Eigen3 REQUIRED)
 find_package(Franka 0.7.0 REQUIRED)
 find_package(Poco REQUIRED COMPONENTS Foundation)
+find_package(Poco REQUIRED COMPONENTS Net)
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
@@ -50,6 +51,14 @@ endforeach()
 
 target_link_libraries(joint_impedance_control Threads::Threads)
 target_link_libraries(motion_with_control Poco::Foundation)
+
+
+add_executable(udp_server src/communication/udp_server.cpp)
+target_link_libraries(udp_server Poco::Net)
+
+add_executable(udp_client src/communication/udp_client.cpp)
+target_link_libraries(udp_client Poco::Net)
+
 
 include(GNUInstallDirs)
 install(TARGETS ${EXAMPLES}
