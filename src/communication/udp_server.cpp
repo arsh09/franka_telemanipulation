@@ -13,13 +13,13 @@ int main(int argc, char** argv)
 {
     try
     {
-        const std::string _address = "127.0.0.1"; 
+        const std::string _address = "192.168.4.5"; 
         Poco::Net::SocketAddress sa(Poco::Net::IPAddress(_address), 12346);
         Poco::Net::DatagramSocket dgs;
         dgs.connect(sa);
         
         Poco::Timestamp now;
-        std::string msg = Poco::DateTimeFormatter::format(now, "<14>%w %f %H:%M:%S Hello, world!");
+        std::string msg = Poco::DateTimeFormatter::format(now, "<14>%w %f %H:%M:%S I am from other PC, world!");
 
         for ( int i = 0; i < 100; i++)
         {
