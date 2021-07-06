@@ -9,6 +9,7 @@ enable_testing()
 
 ## Dependencies
 find_package(Eigen3 REQUIRED)
+find_package(nlohmann_json 3.2.0 REQUIRED)
 find_package(Franka 0.7.0 REQUIRED)
 find_package(Poco REQUIRED COMPONENTS Foundation Net)
 find_package(Boost 1.58.0 REQUIRED system thread)
@@ -61,10 +62,6 @@ target_link_libraries(udp_server ${Poco_LIBRARIES})
 add_executable(udp_client src/communication/udp_client.cpp)
 target_link_libraries(udp_client ${Poco_LIBRARIES})
 
-add_executable(udp_send_state src/communication/udp_send_state.cpp)
-target_link_libraries(udp_send_state 
-  ${Franka_LIBRARIES} 
-)
 
 add_executable(udp_asio_client src/communication/udp_asio_client.cpp)
 target_link_libraries(udp_asio_client 

@@ -1,33 +1,24 @@
+
+/** 
+ * UDP Server -> Slave Robot
+ * UDP Client -> Master Robot
+ * 
+ * 
+ * Muhammad Arshad 
+ * 07-July-2021
+**/
+
+
 #include <cstdlib>
 #include <iostream>
+
+
 #include <boost/asio.hpp>
 
 using boost::asio::ip::udp;
 
-enum { max_length = 1024 };
 
-// void server(boost::asio::io_service& io_service, unsigned short port)
-// {
-//   udp::socket sock(io_service, udp::endpoint(udp::v4(), port));
-  
-//   udp::endpoint sender_endpoint;
-//   char data[max_length];
-//   sock.async_receive_from(
-//     boost::asio::buffer(data, max_length), sender_endpoint,
-//     [&data, &sock, &sender_endpoint](boost::system::error_code ec, std::size_t bytes_recvd)
-//     {
-//       if ( !ec && bytes_recvd > 0 ) 
-//       {
-//         std::cout << "Received from client (Async): " ;
-//         std::cout.write(data, bytes_recvd);
-//         std::cout << std::endl;
-//         sock.send_to(boost::asio::buffer(data, bytes_recvd), sender_endpoint);
-//       }
-//     });
-
-//   io_service.run();
-// }
-
+enum { max_length = 8192 };
 
 class server
 {
@@ -46,9 +37,9 @@ public:
         {
           if (!ec && bytes_recvd > 0)
           {
-            std::cout << "Received frrom client: " ;
+            std::cout << "Received from client: ";// << (int) bytes_recvd ;
             std::cout.write(data_, bytes_recvd) ;
-            std::cout << std::endl;
+            std::cout << std::endl << std::endl;
             do_send(bytes_recvd);
           }
           else
@@ -62,8 +53,9 @@ public:
   {
     socket_.async_send_to(
         boost::asio::buffer(data_, length), sender_endpoint_,
-        [this](boost::system::error_code /*ec*/, std::size_t /*bytes_sent*/)
+        [this](boost::system::error_code ec, std::size_t bytes_sent)
         {
+          // std::cout << "Bytes send to client: " << bytes_sent << std::endl;
           do_receive();
         });
   }
@@ -71,7 +63,7 @@ public:
 private:
   udp::socket socket_;
   udp::endpoint sender_endpoint_;
-  enum { max_length = 1024 };
+  enum { max_length = 8192 };
   char data_[max_length];
 };
 
