@@ -7,9 +7,19 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include(CTest)
 enable_testing()
 
+include(FetchContent)
+FetchContent_Declare(json
+  GIT_REPOSITORY https://github.com/nlohmann/json.git
+  GIT_TAG v3.7.3)
+
+  FetchContent_GetProperties(json)
+  if(NOT json_POPULATED)
+    FetchContent_Populate(json)
+    add_subdirectory(${json_SOURCE_DIR} ${json_BINARY_DIR} EXCLUDE_FROM_ALL)
+  endif()
+
 ## Dependencies
 find_package(Eigen3 REQUIRED)
-find_package(nlohmann_json 3.2.0 REQUIRED)
 find_package(Franka 0.7.0 REQUIRED)
 find_package(Poco REQUIRED COMPONENTS Foundation Net)
 find_package(Boost 1.58.0 REQUIRED system thread)
@@ -67,7 +77,9 @@ add_executable(udp_asio_client src/communication/udp_asio_client.cpp)
 target_link_libraries(udp_asio_client 
   ${Franka_LIBRARIES} 
   ${Boost_LIBRARIES}
+  nlohmann_json::nlohmann_json
 )
+
 
 add_executable(udp_asio_server src/communication/udp_asio_server.cpp)
 target_link_libraries(udp_asio_server 

@@ -4,12 +4,12 @@
 #include <iostream>
 #include <boost/asio.hpp>
 
-// #include <boost/archive/text_oarchive.hpp>
-// #include <boost/archive/text_iarchive.hpp>
-
 #include <franka/exception.h>
 #include <franka/robot.h>
 
+#include <nlohmann/json.hpp>
+// for convenience
+using json = nlohmann::json;
 
 using boost::asio::ip::udp;
 
@@ -51,7 +51,7 @@ int main(int argc, char* argv[])
                 std::cout << "Reply is: ";
                 std::cout.write(reply, reply_length);
                 std::cout << std::endl << std::endl;
-                
+
                 return true;
             });
 
