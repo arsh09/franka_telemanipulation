@@ -1,67 +1,46 @@
-// DatagramSocket send example
-
-#include "Poco/Net/DatagramSocket.h"
-#include "Poco/Net/SocketAddress.h"
-#include "Poco/Timestamp.h"
-#include "Poco/DateTimeFormatter.h"
-
-#include <chrono>
+// Copyright (c) 2017 Franka Emika GmbH
+// Use of this source code is governed by the Apache-2.0 license, see LICENSE
 #include <iostream>
-#include <thread>
 
 #include <franka/exception.h>
 #include <franka/robot.h>
 
-int main(int argc, char** argv)
-{
+#include <franka/model.h>
 
-    if (argc != 3)
-    {
-        std::cerr << "Please run as follow: " << argv[0] << "  <robot-hostname>  <remote-pc-hostname> " << std::endl;
-        return -1;
-    }
+// #include <Poco/Net/DatagramSocket.h>
 
-    try
-    {
-        const std::string _address = argv[2]; 
-        Poco::Net::SocketAddress sa(Poco::Net::IPAddress(_address), 12346);
-        Poco::Net::DatagramSocket dgs;
-        dgs.connect(sa);
-       
-        // Poco::Timestamp now;
-        // std::string msg = Poco::DateTimeFormatter::format(now, "<14>%w %f %H:%M:%S I am from other PC, world!");
-        // for ( int i = 0; i < 100; i++)
-        // {
-        //     dgs.sendBytes(msg.data(), msg.size());
-        //     std::this_thread::sleep_for( std::chrono::milliseconds(100) ) ;
-        // }
-
-        try {
-            franka::Robot robot(argv[1]);
-
-                size_t count = 0;
-                robot.read([&dgs, &count](const franka::RobotState& robot_state) {
-                std::cout << robot_state << std::endl;
-                if ( count < 100 )
-                {
-                    dgs.close();
-                    return 0;
-                }
-            });
-            std::cout << "Done." << std::endl;
-
-        } catch (franka::Exception const& e) {
-            std::cout << e.what() << std::endl;
-            return -1;
-        }
+// #include <Poco/Net/SocketAddress.h>
+// #include <Poco/Timestamp.h>
+// #include <Poco/DateTimeFormatter.h>
 
 
-    }
-    catch(Poco::IOException& e)
-    {
-        std::cerr << e.what() << '\n';
-    }
-    
-    return 0;
+/**
+ * @example echo_robot_state.cpp
+ * An example showing how to continuously read the robot state.
+ */
 
+int main(int argc, char** argv) {
+  if (argc != 2) {
+    std::cerr << "Usage: " << argv[0] << " <robot-hostname>" << std::endl;
+    return -1;
+  }
+
+  try {
+    franka::Robot robot(argv[1]);
+
+    size_t count = 0;
+    robot.read([&count](const franka::RobotState& robot_state) {
+      // Printing to std::cout adds a delay. This is acceptable for a read loop such as this, but
+      // should not be done in a control loop.
+      std::cout << robot_state << std::endl;
+      return count++ < 100;
+    });
+
+    std::cout << "Done." << std::endl;
+  } catch (franka::Exception const& e) {
+    std::cout << e.what() << std::endl;
+    return -1;
+  }
+
+  return 0;
 }

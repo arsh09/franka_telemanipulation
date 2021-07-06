@@ -1,5 +1,7 @@
 {
     "files.associations": {
-        "functional": "cpp"
+        "functional": "cpp",
+        "chrono": "cpp",
+        "*.ipp": "cpp"
     }
 }

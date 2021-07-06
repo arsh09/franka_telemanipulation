@@ -10,8 +10,10 @@ enable_testing()
 ## Dependencies
 find_package(Eigen3 REQUIRED)
 find_package(Franka 0.7.0 REQUIRED)
-find_package(Poco REQUIRED COMPONENTS Foundation)
-find_package(Poco REQUIRED COMPONENTS Net)
+find_package(Poco REQUIRED COMPONENTS Foundation Net)
+find_package(Boost 1.58.0 REQUIRED system thread)
+
+include_directories( ${Boost_INCLUDE_DIR} )
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
@@ -54,23 +56,38 @@ target_link_libraries(motion_with_control Poco::Foundation)
 
 
 add_executable(udp_server src/communication/udp_server.cpp)
-target_link_libraries(udp_server Poco::Net)
+target_link_libraries(udp_server ${Poco_LIBRARIES})
 
 add_executable(udp_client src/communication/udp_client.cpp)
-target_link_libraries(udp_client Poco::Net)
+target_link_libraries(udp_client ${Poco_LIBRARIES})
 
 add_executable(udp_send_state src/communication/udp_send_state.cpp)
-target_link_libraries(udp_send_state Poco::Net ${Franka_LIBRARIES} )
+target_link_libraries(udp_send_state 
+  ${Franka_LIBRARIES} 
+)
+
+add_executable(udp_asio_client src/communication/udp_asio_client.cpp)
+target_link_libraries(udp_asio_client 
+  ${Franka_LIBRARIES} 
+  ${Boost_LIBRARIES}
+)
+
+add_executable(udp_asio_server src/communication/udp_asio_server.cpp)
+target_link_libraries(udp_asio_server 
+  ${Franka_LIBRARIES} 
+  ${Boost_LIBRARIES}
+)
 
 
+
+
+# install
 include(GNUInstallDirs)
 install(TARGETS ${EXAMPLES}
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
-
-# install
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})
 include(CPack)

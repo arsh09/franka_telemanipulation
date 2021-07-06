@@ -11,10 +11,17 @@
 
 int main(int argc, char** argv)
 {
+
+    if (argc != 2)
+    {
+        std::cerr << "Usage: " << argv[0] << " <remote-pc-hostname>" << std::endl;
+        return -1;
+    }
+
     try
     {
-        const std::string _address = "192.168.4.5"; 
-        Poco::Net::SocketAddress sa(Poco::Net::IPAddress(_address), 12346);
+        const std::string _address = argv[1]; 
+        Poco::Net::SocketAddress sa(Poco::Net::IPAddress(_address), 12345);
         Poco::Net::DatagramSocket dgs;
         dgs.connect(sa);
         
