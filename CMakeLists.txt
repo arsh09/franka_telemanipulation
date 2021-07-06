@@ -59,6 +59,9 @@ target_link_libraries(udp_server Poco::Net)
 add_executable(udp_client src/communication/udp_client.cpp)
 target_link_libraries(udp_client Poco::Net)
 
+add_executable(udp_send_state src/communication/udp_send_state.cpp)
+target_link_libraries(udp_send_state Poco::Net ${Franka_LIBRARIES} )
+
 
 include(GNUInstallDirs)
 install(TARGETS ${EXAMPLES}

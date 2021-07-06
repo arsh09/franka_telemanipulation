@@ -24,6 +24,8 @@ int main(int argc, char** argv)
             buffer[n] = '\0';
             std::cout << sender.toString() << ": " << buffer << std::endl;
         }
+
+        dgs.close();
     }
 
     catch (Poco::IOException& e)

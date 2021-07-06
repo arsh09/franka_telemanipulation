@@ -26,6 +26,8 @@ int main(int argc, char** argv)
             dgs.sendBytes(msg.data(), msg.size());
             std::this_thread::sleep_for( std::chrono::milliseconds(100) ) ;
         }
+
+        dgs.close();
     }
     catch(Poco::IOException& e)
     {
