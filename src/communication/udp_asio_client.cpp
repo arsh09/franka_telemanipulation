@@ -38,8 +38,8 @@ public:
             udp::resolver resolver(io_service);
             udp::resolver::query query( server_ip , server_port );
             receiver_endpoint = *resolver.resolve( query );
-            do_receive();
             intiialize_robot(slave_ip);
+            do_receive();
         }
         else if (is_master == 1)
         {
@@ -56,20 +56,12 @@ public:
             franka::Robot robot(slave_ip);
             size_t count = 0;
             robot.read(  [this] (const franka::RobotState& robot_state) 
-                {
-                    // send slave robot state
-                    if (is_master == 0)
-                    {
-                        std::cout<< "Master states is setup" << std::endl;
-                    }
-                    else
-                    {
-                        std::cout<< "Slave states is setup" << std::endl;
-                    }
-                    
+                {   
+
                     _master_state = robot_state;
                     std::stringstream ss;
                     ss << _master_state;
+                    // std::size_t sentBytes = socket_.send_to(boost::asio::buffer(ss.str()), _endpoint);
                     do_send(ss);
                     return true;
                 });
@@ -83,7 +75,17 @@ public:
 
     void do_send(std::stringstream& _stream)
     {
-        socket_.async_send_to( boost::asio::buffer(_stream.str()), sender_endpoint, [this](boost::system::error_code ec, std::size_t bytes_sent)
+        udp::endpoint _endpoint;
+        if (is_master == 0)
+        {
+            _endpoint = receiver_endpoint;
+        }
+        else
+        {
+            _endpoint = sender_endpoint;
+        }
+
+        socket_.async_send_to( boost::asio::buffer(_stream.str()), _endpoint, [this](boost::system::error_code ec, std::size_t bytes_sent)
             {
                 if (!ec && bytes_sent > 0)
                 {
