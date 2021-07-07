@@ -29,25 +29,27 @@ class client
 {
 public:
     client(boost::asio::io_service& io_service, char* server_port, char* server_ip, char* slave_ip, int is_master)
-       : socket_( io_service, udp::endpoint(udp::v4(), 0) ),
+       : socket_( io_service, udp::endpoint(udp::v4(), std::atoi(server_port)) ),
        is_master(is_master)
     {
-        if (is_master == 0) // master
+        if (is_master == 0) // master (192.168.4.5 -> Other PC hostname)
         {
             // udp client
             udp::resolver resolver(io_service);
             udp::resolver::query query( server_ip , server_port );
-            receiver_endpoint = *resolver.resolve( query );
+            server_endpoint = *resolver.resolve( query );
             std::cout << "Tis is a UDP client" << std::endl;
             intiialize_robot(slave_ip);
             do_receive();
         }
         else if (is_master == 1) // slave
         {
-            // udp server
+            // udp::resolver resolver(io_service);
+            // udp::resolver::query query( server_ip , server_port );
+            // client_endpoint = *resolver.resolve( query );
             std::cout << "Tis is a UDP server" << std::endl;
+            intiialize_robot(slave_ip);
             do_receive();
-            // intiialize_robot(slave_ip);     
         }
     }
 
@@ -80,39 +82,53 @@ public:
         udp::endpoint _endpoint;
         if (is_master == 0)
         {
-            _endpoint = sender_endpoint ;
+            _endpoint = server_endpoint;
         }
         else
         {
-            _endpoint = receiver_endpoint;
+            _endpoint = client_endpoint;
         }
 
         socket_.async_send_to( boost::asio::buffer(_stream.str()), _endpoint, [this](boost::system::error_code ec, std::size_t bytes_sent)
             {
                 if (!ec && bytes_sent > 0)
                 {
-                    std::cout << "Send from master to slave: " << (int) bytes_sent << std::endl;
+                    if (is_master == 0)
+                    std::cout << "Sent from master to slave: " << (int) bytes_sent << std::endl;
+                    else
+                    std::cout << "Sent from slave to master:  " << (int) bytes_sent << std::endl;
                 }
+
             });
     }
 
     void do_receive() 
     {
+        udp::endpoint _endpoint;
+        if (is_master == 0)
+        {
+            _endpoint = client_endpoint;
+        }
+        else
+        {
+            _endpoint = client_endpoint;
+        }
         socket_.async_receive_from(
-        boost::asio::buffer(receive_data_, max_length), sender_endpoint,
+        boost::asio::buffer(receive_data_, max_length), client_endpoint,
         [this](boost::system::error_code ec, std::size_t bytes_recvd)
         {
             if (!ec && bytes_recvd > 0)
             {
                 if (is_master == 0)
                 {
-                    std::cout << "Received a msg from server (slave)" << std::endl;
+                    std::cout << "Received a msg from a master: " << (int) bytes_recvd << std::endl;
                 }
                 if (is_master == 1)
                 {
-                    std::cout << "Received a msg from client (slave)" << std::endl;
+                    std::cout << "Received a msg from a master: " << (int) bytes_recvd << std::endl;
                 }
-                state_parser_json(receive_data_, _slave_state);
+                
+                // state_parser_json(receive_data_, _slave_state);
                 memset( receive_data_, 0, sizeof(receive_data_) );
             }
             else
@@ -181,8 +197,8 @@ public:
 
 private:
     udp::socket socket_;
-    udp::endpoint sender_endpoint;
-    udp::endpoint receiver_endpoint;
+    udp::endpoint client_endpoint;
+    udp::endpoint server_endpoint;
     // char* slave_ip;
     int is_master ;
     int max_length = 8192;
@@ -258,7 +274,7 @@ int main(int argc , char* argv[])
 //             size_t count = 0;
 //             robot.read([&count, &endpoint, &sock](const franka::RobotState& robot_state) 
 //             {
-//                 udp::endpoint sender_endpoint;
+//                 udp::endpoint client_endpoint;
                 
 //                 std::stringstream ss;
 //                 ss << robot_state;
@@ -267,7 +283,7 @@ int main(int argc , char* argv[])
 
 //                 char reply[max_length];
 //                 memset( reply , 0, sizeof(reply) );
-//                 size_t reply_length = sock.receive_from( boost::asio::buffer(reply, max_length), sender_endpoint);
+//                 size_t reply_length = sock.receive_from( boost::asio::buffer(reply, max_length), client_endpoint);
                 
 //                 franka::RobotState _slave_state;
 //                 state_parser_json( reply, _slave_state);
