@@ -34,6 +34,7 @@ public:
     {
         if (is_master == 0)
         {
+            // udp client
             udp::resolver resolver(io_service);
             udp::resolver::query query( server_ip , server_port );
             receiver_endpoint = *resolver.resolve( query );
@@ -42,6 +43,7 @@ public:
         }
         else if (is_master == 1)
         {
+            // udp server
             do_receive();
             intiialize_robot(slave_ip);     
         }
@@ -56,6 +58,15 @@ public:
             robot.read(  [this] (const franka::RobotState& robot_state) 
                 {
                     // send slave robot state
+                    if (is_master == 0)
+                    {
+                        std::cout<< "Master states is setup" << std::endl;
+                    }
+                    else
+                    {
+                        std::cout<< "Slave states is setup" << std::endl;
+                    }
+                    
                     _master_state = robot_state;
                     std::stringstream ss;
                     ss << _master_state;
