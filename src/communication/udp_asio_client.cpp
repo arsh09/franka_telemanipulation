@@ -106,11 +106,11 @@ public:
             {
                 if (is_master == 0)
                 {
-                    std::cout << "Received a msg from server (slave)" std::end;
+                    std::cout << "Received a msg from server (slave)" << std::endl;
                 }
                 if (is_master == 1)
                 {
-                    std::cout << "Received a msg from client (slave)" std::end;
+                    std::cout << "Received a msg from client (slave)" << std::endl;
                 }
                 state_parser_json(receive_data_, _slave_state);
                 memset( receive_data_, 0, sizeof(receive_data_) );
