@@ -12,6 +12,9 @@
 #include <cstdlib>
 #include <iostream>
 #include <franka/robot_state.h>
+#include <franka/exception.h>
+#include <franka/robot.h>
+
 
 #include <nlohmann/json.hpp>
 // for convenience
@@ -86,7 +89,6 @@ public:
           robot_state.cartesian_collision = state["cartesian_collision"];
           robot_state.cartesian_contact = state["cartesian_contact"];
           robot_state.control_command_success_rate = state["control_command_success_rate"];
-          // robot_state.current_errors = state["current_errors"];
           robot_state.ddelbow_c = state["ddelbow_c"];
           robot_state.ddq_d = state["ddq_d"];
           robot_state.delbow_c = state["delbow_c"];
@@ -99,7 +101,6 @@ public:
           robot_state.elbow_d = state["elbow_d"];
           robot_state.joint_collision = state["joint_collision"];
           robot_state.joint_contact = state["joint_contact"];
-          // robot_state.last_motion_errors = state["last_motion_errors"];
           robot_state.m_ee = state["m_ee"];
           robot_state.m_load = state["m_load"];
           robot_state.m_total = state["m_total"];
@@ -109,6 +110,8 @@ public:
           robot_state.tau_J = state["tau_J"];
           robot_state.tau_ext_hat_filtered = state["tau_ext_hat_filtered"];
           robot_state.theta = state["theta"];
+          // robot_state.last_motion_errors = state["last_motion_errors"];
+          // robot_state.last_motion_errors = state["last_motion_errors"];
           // robot_state.time = state["time"];
           
           std::cout << state["last_motion_errors"] << "\t" <<  std::endl;
@@ -125,6 +128,7 @@ private:
   udp::endpoint sender_endpoint_;
   enum { max_length = 8192 };
   char data_[max_length];
+
 };
 
 
