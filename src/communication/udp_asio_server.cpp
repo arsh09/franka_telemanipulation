@@ -57,7 +57,6 @@ public:
         boost::asio::buffer(data_, length), sender_endpoint_,
         [this](boost::system::error_code ec, std::size_t bytes_sent)
         {
-          // std::cout << "Bytes send to client: " << bytes_sent << std::endl;
           memset( data_, 0, sizeof(data_));
           do_receive();
         });
