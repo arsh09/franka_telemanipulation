@@ -56,6 +56,8 @@
         "codecvt": "cpp",
         "algorithm": "cpp",
         "memory": "cpp",
-        "random": "cpp"
+        "random": "cpp",
+        "forward_list": "cpp",
+        "valarray": "cpp"
     }
 }
