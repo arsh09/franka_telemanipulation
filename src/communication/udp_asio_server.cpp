@@ -11,10 +11,13 @@
 
 #include <cstdlib>
 #include <iostream>
+#include <franka/robot_state.h>
 
+#include <nlohmann/json.hpp>
+// for convenience
+using json = nlohmann::json;
 
 #include <boost/asio.hpp>
-
 using boost::asio::ip::udp;
 
 
@@ -37,9 +40,8 @@ public:
         {
           if (!ec && bytes_recvd > 0)
           {
-            std::cout << "Received from client: ";// << (int) bytes_recvd ;
-            std::cout.write(data_, bytes_recvd) ;
-            std::cout << std::endl << std::endl;
+            franka::RobotState _master_state;
+            state_parser_json(data_, _master_state);
             do_send(bytes_recvd);
           }
           else
@@ -56,8 +58,67 @@ public:
         [this](boost::system::error_code ec, std::size_t bytes_sent)
         {
           // std::cout << "Bytes send to client: " << bytes_sent << std::endl;
+          memset( data_, 0, sizeof(data_));
           do_receive();
         });
+  }
+
+  void state_parser_json(std::string s, franka::RobotState& robot_state)
+  {
+      try
+      {
+          auto state = json::parse(s);
+          robot_state.EE_T_K = state["EE_T_K"];
+          robot_state.F_T_EE = state["F_T_EE"];
+          robot_state.F_x_Cee = state["F_x_Cee"];
+          robot_state.F_x_Cload = state["F_x_Cload"];
+          robot_state.F_x_Ctotal = state["F_x_Ctotal"];
+          robot_state.I_ee = state["I_ee"];
+          robot_state.I_load = state["I_load"];
+          robot_state.I_total = state["I_total"];
+          robot_state.K_F_ext_hat_K = state["K_F_ext_hat_K"];
+          robot_state.O_F_ext_hat_K = state["O_F_ext_hat_K"];
+          robot_state.O_T_EE = state["O_T_EE"];
+          robot_state.O_T_EE_c = state["O_T_EE_c"];
+          robot_state.O_T_EE_d = state["O_T_EE_d"];
+          robot_state.O_dP_EE_c = state["O_dP_EE_c"];
+          robot_state.O_dP_EE_d = state["O_dP_EE_d"];
+          robot_state.O_ddP_EE_c = state["O_ddP_EE_c"];
+          robot_state.cartesian_collision = state["cartesian_collision"];
+          robot_state.cartesian_contact = state["cartesian_contact"];
+          robot_state.control_command_success_rate = state["control_command_success_rate"];
+          // robot_state.current_errors = state["current_errors"];
+          robot_state.ddelbow_c = state["ddelbow_c"];
+          robot_state.ddq_d = state["ddq_d"];
+          robot_state.delbow_c = state["delbow_c"];
+          robot_state.dq = state["dq"];
+          robot_state.dq_d = state["dq_d"];
+          robot_state.dtau_J = state["dtau_J"];
+          robot_state.dtheta = state["dtheta"];
+          robot_state.elbow = state["elbow"];
+          robot_state.elbow_c = state["elbow_c"];
+          robot_state.elbow_d = state["elbow_d"];
+          robot_state.joint_collision = state["joint_collision"];
+          robot_state.joint_contact = state["joint_contact"];
+          // robot_state.last_motion_errors = state["last_motion_errors"];
+          robot_state.m_ee = state["m_ee"];
+          robot_state.m_load = state["m_load"];
+          robot_state.m_total = state["m_total"];
+          robot_state.q = state["q"];
+          robot_state.q_d = state["q_d"];
+          robot_state.robot_mode = state["robot_mode"];
+          robot_state.tau_J = state["tau_J"];
+          robot_state.tau_ext_hat_filtered = state["tau_ext_hat_filtered"];
+          robot_state.theta = state["theta"];
+          // robot_state.time = state["time"];
+          
+          std::cout << state["last_motion_errors"] << "\t" <<  std::endl;
+          
+      }
+      catch(json::exception& e)
+      {
+          std::cout << e.what() << std::endl;
+      }
   }
 
 private:

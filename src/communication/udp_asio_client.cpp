@@ -1,8 +1,16 @@
+/** 
+ * UDP Server -> Slave Robot
+ * UDP Client -> Master Robot
+ * 
+ * 
+ * Muhammad Arshad 
+ * 07-July-2021
+**/
+
 
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
-#include <boost/asio.hpp>
 
 #include <franka/exception.h>
 #include <franka/robot.h>
@@ -11,9 +19,38 @@
 // for convenience
 using json = nlohmann::json;
 
+#include <boost/asio.hpp>
 using boost::asio::ip::udp;
 
 enum { max_length = 8192 };
+
+void state_parser_string(std::string s)
+{
+    std::string delimiter = ":";
+    size_t pos = 0;
+    size_t last_pos = 0;
+    std::string token;
+    while ((pos = s.find(delimiter)) != std::string::npos) {
+        token = s.substr(0, pos);
+        std::cout << token << std::endl;
+        s.erase(0, pos + delimiter.length());
+    }
+    std::cout << s << std::endl;
+    return ;
+}
+
+void state_parser_json(std::string s, franka::RobotState& robot_state)
+{
+    try{
+        auto j3 = json::parse(s);
+        std::cout << j3 << std::endl;
+    }
+    catch(json::exception& e)
+    {
+        std::cout << e.what() << std::endl;
+    }
+
+}
 
 int main(int argc, char* argv[])
 {
@@ -38,7 +75,6 @@ int main(int argc, char* argv[])
             robot.read([&count, &endpoint, &sock](const franka::RobotState& robot_state) 
             {
                 udp::endpoint sender_endpoint;
-                char request[] = "Msg from client robot callback";      
                 
                 std::stringstream ss;
                 ss << robot_state;
@@ -46,12 +82,11 @@ int main(int argc, char* argv[])
                 std::size_t sentBytes = sock.send_to(boost::asio::buffer(ss.str()), endpoint);
 
                 char reply[max_length];
+                memset( reply , 0, sizeof(reply) );
                 size_t reply_length = sock.receive_from( boost::asio::buffer(reply, max_length), sender_endpoint);
                 
-                std::cout << "Reply is: ";
-                std::cout.write(reply, reply_length);
-                std::cout << std::endl << std::endl;
-
+                franka::RobotState _slave_state;
+                state_parser_json( reply, _slave_state);
                 return true;
             });
 

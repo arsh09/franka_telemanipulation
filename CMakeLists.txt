@@ -18,6 +18,8 @@ enable_testing()
 #     FetchContent_Populate(json)
 #     add_subdirectory(${json_SOURCE_DIR} ${json_BINARY_DIR} EXCLUDE_FROM_ALL)
 #   endif()
+set(JSON_BuildTests OFF CACHE INTERNAL "")
+add_subdirectory( ${CMAKE_CURRENT_SOURCE_DIR}/third_party/nlohmann_json_cmake_fetchcontent)
 
 
 ## Dependencies
@@ -25,8 +27,10 @@ find_package(Eigen3 REQUIRED)
 find_package(Franka 0.7.0 REQUIRED)
 find_package(Poco REQUIRED COMPONENTS Foundation Net)
 find_package(Boost 1.58.0 REQUIRED system thread)
+find_package(jsoncpp  REQUIRED)
 
 include_directories( ${Boost_INCLUDE_DIR} )
+include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/include )
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
@@ -35,8 +39,8 @@ find_package(Threads REQUIRED)
 add_library(examples_common STATIC
   src/examples/examples_common.cpp
 )
-
 target_link_libraries(examples_common PUBLIC  ${Franka_LIBRARIES} )
+
 
 
 # build
@@ -87,6 +91,7 @@ add_executable(udp_asio_server src/communication/udp_asio_server.cpp)
 target_link_libraries(udp_asio_server 
   ${Franka_LIBRARIES} 
   ${Boost_LIBRARIES}
+  nlohmann_json::nlohmann_json
 )
 
 
