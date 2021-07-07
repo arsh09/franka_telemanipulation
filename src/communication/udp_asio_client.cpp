@@ -80,11 +80,11 @@ public:
         udp::endpoint _endpoint;
         if (is_master == 0)
         {
-            _endpoint = receiver_endpoint;
+            _endpoint = sender_endpoint ;
         }
         else
         {
-            _endpoint = sender_endpoint;
+            _endpoint = receiver_endpoint;
         }
 
         socket_.async_send_to( boost::asio::buffer(_stream.str()), _endpoint, [this](boost::system::error_code ec, std::size_t bytes_sent)
