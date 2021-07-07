@@ -17,6 +17,9 @@ $ cmake --build . --config Release
 $ sudo cmake --build . --target install
 ```
 
+4) JSON (added in third-party folder) 
+
+
 See more details on POCO github
 
 
