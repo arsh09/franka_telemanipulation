@@ -32,20 +32,22 @@ public:
        : socket_( io_service, udp::endpoint(udp::v4(), 0) ),
        is_master(is_master)
     {
-        if (is_master == 0)
+        if (is_master == 0) // master
         {
             // udp client
             udp::resolver resolver(io_service);
             udp::resolver::query query( server_ip , server_port );
             receiver_endpoint = *resolver.resolve( query );
+            std::cout << "Tis is a UDP client" << std::endl;
             intiialize_robot(slave_ip);
             do_receive();
         }
-        else if (is_master == 1)
+        else if (is_master == 1) // slave
         {
             // udp server
+            std::cout << "Tis is a UDP server" << std::endl;
             do_receive();
-            intiialize_robot(slave_ip);     
+            // intiialize_robot(slave_ip);     
         }
     }
 
@@ -96,12 +98,30 @@ public:
 
     void do_receive() 
     {
+        udp::endpoint _endpoint;
+        if (is_master == 0)
+        {
+            _endpoint = sender_endpoint ;
+        }
+        else
+        {
+            _endpoint = receiver_endpoint;
+        }
+        
         socket_.async_receive_from(
-        boost::asio::buffer(receive_data_, max_length), sender_endpoint,
+        boost::asio::buffer(receive_data_, max_length), _endpoint,
         [this](boost::system::error_code ec, std::size_t bytes_recvd)
         {
             if (!ec && bytes_recvd > 0)
             {
+                if (is_master == 0)
+                {
+                    std::cout << "Received a msg from server (slave)" << std::endl;
+                }
+                if (is_master == 1)
+                {
+                    std::cout << "Received a msg from client (master)" << std::endl;
+                }
                 state_parser_json(receive_data_, _slave_state);
                 memset( receive_data_, 0, sizeof(receive_data_) );
             }
