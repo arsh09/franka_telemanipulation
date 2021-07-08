@@ -20,6 +20,7 @@
 // for convenience
 using json = nlohmann::json;
 
+#include <boost/thread.hpp>
 #include <boost/asio.hpp>
 using boost::asio::ip::udp;
 
@@ -36,8 +37,9 @@ public:
         udp::resolver::query query( server_ip , server_port );
         slave_endpoint = *resolver.resolve( query );
         std::cout << "I am a UDP client" << std::endl;
+
+        boost::thread(boost::bind(&boost::asio::io_service::run, &io_service));        
         intiialize_robot(master_ip);
-        // std::cout << "events are hooked" << std::endl;
     }
 
     bool intiialize_robot(char* master_ip)
@@ -51,14 +53,7 @@ public:
                     _master_state = robot_state;
                     std::stringstream ss;
                     ss << _master_state;
-                    std::cout << "Read master states: " << std::endl;
-
-                    // std::size_t sentBytes = socket_.send_to(boost::asio::buffer(ss.str()), slave_endpoint);
-                    // size_t reply_length = socket_.receive_from( boost::asio::buffer(receive_data_, max_length), master_endpoint);
-                    // std::cout << "Sent (from master-client): " << (int) sentBytes << "\tReceived (from slave-server)" << (int) reply_length << std::endl;
-
-                    // do_send(ss);
-
+                    do_send(ss);
                     return true;
                 });
         } 
@@ -73,12 +68,10 @@ public:
     {
         socket_.async_send_to( boost::asio::buffer(_stream.str()), slave_endpoint, [this](boost::system::error_code ec, std::size_t bytes_sent)
             {   
-                std::cout << "Sent bytes: " << bytes_sent << std::endl;
                 if (bytes_sent > 0)
                 {
                     std::cout << "Sent from master to slave: " << (int) bytes_sent << std::endl;
                 }
-
                 do_receive();                
             });
     }

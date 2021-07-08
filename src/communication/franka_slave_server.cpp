@@ -21,6 +21,8 @@
 using json = nlohmann::json;
 
 #include <boost/asio.hpp>
+#include <boost/thread.hpp>
+
 using boost::asio::ip::udp;
 
 enum { max_length = 8192 };
@@ -33,7 +35,10 @@ public:
     {
         std::cout << "Tis is a UDP server" << std::endl;
         do_receive();
-        // intiialize_robot(slave_ip);
+        
+        boost::thread(boost::bind(&boost::asio::io_service::run, &io_service));
+
+        intiialize_robot(slave_ip);
     }
 
     bool intiialize_robot(char* slave_ip)
@@ -45,27 +50,6 @@ public:
             robot.read(  [this] (const franka::RobotState& robot_state) 
                 {   
                     _slave_state = robot_state;
-
-                    std::stringstream ss;
-                    ss << _slave_state;
-
-                    // if (shouldReceive)
-                    // {
-                    //     std::cout << "Read slave states " << std::endl;
-                    //     shouldReceive = false;
-                    //     do_receive();
-                    // }
-
-                    // size_t reply_length = socket_.receive_from( boost::asio::buffer(receive_data_, max_length), slave_endpoint);
-                    // std::size_t sentBytes = 0; socket_.send_to(boost::asio::buffer(ss.str()), slave_endpoint);
-                    // std::cout << "Sent (from slave-server): " << (int) sentBytes << "\tReceived (from master-client)" << (int) reply_length << std::endl;
-               
-                    // if (shouldReceive)
-                    // {
-                    //     shouldReceive = false;
-                    //     do_receive();   
-                    // }
-
                     return true;                
                 });
         } 
@@ -90,7 +74,6 @@ public:
 
     void do_receive() 
     {
-        std::cout << "Setting up async read. " << std::endl;
         socket_.async_receive_from(
         boost::asio::buffer(receive_data_, max_length), slave_endpoint,
         [this](boost::system::error_code ec, std::size_t bytes_recvd)
@@ -99,9 +82,8 @@ public:
             {
                 std::cout << "Received a msg from a master to slave: " << (int) bytes_recvd << std::endl;
                 memset( receive_data_, 0, sizeof(receive_data_) );
-
                 std::stringstream ss;
-                ss << "Data from slave (server) to master (client)";  //_slave_state;
+                ss << _slave_state;
                 do_send(ss);
             }            
             else
@@ -192,7 +174,6 @@ int main(int argc , char* argv[])
     short port = std::atoi(argv[1]);
     boost::asio::io_service io_service;
     server s(io_service, port, argv[2] );
-    io_service.run();
 
     std::cout << "bye bye server! " << std::endl;
     return 0;
