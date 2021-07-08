@@ -32,8 +32,7 @@ public:
        : socket_( io_service, udp::endpoint(udp::v4(), port))
     {
         std::cout << "Tis is a UDP server" << std::endl;
-        // intiialize_robot(slave_ip);
-        do_receive();
+        intiialize_robot(slave_ip);
     }
 
     bool intiialize_robot(char* slave_ip)
@@ -45,6 +44,18 @@ public:
             robot.read(  [this] (const franka::RobotState& robot_state) 
                 {   
                     _slave_state = robot_state;
+
+
+                    size_t reply_length = socket_.receive_from( boost::asio::buffer(receive_data_, max_length), slave_endpoint);
+                    std::size_t sentBytes = socket_.send_to(boost::asio::buffer(ss.str()), slave_endpoint);
+                    std::cout << "Sent (from slave-server): " << (int) sentBytes << "\tReceived (from master-client)" << (int) reply_length << std::endl;
+               
+                    // if (shouldReceive)
+                    // {
+                    //     shouldReceive = false;
+                    //     do_receive();   
+                    // }
+
                     return true;                
                 });
         } 
@@ -153,6 +164,7 @@ private:
     char receive_data_[8192];
     franka::RobotState _master_state; 
     franka::RobotState _slave_state;
+    bool shouldReceive = true;
 
 }; // end of client
 
