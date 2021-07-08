@@ -94,6 +94,20 @@ target_link_libraries(udp_asio_server
   nlohmann_json::nlohmann_json
 )
 
+add_executable(franka_master src/communication/franka_master_client.cpp)
+target_link_libraries(franka_master 
+  ${Franka_LIBRARIES} 
+  ${Boost_LIBRARIES}
+  nlohmann_json::nlohmann_json
+)
+
+add_executable(franka_slave src/communication/franka_slave_server.cpp)
+target_link_libraries(franka_slave 
+  ${Franka_LIBRARIES} 
+  ${Boost_LIBRARIES}
+  nlohmann_json::nlohmann_json
+)
+
 
 
 # install
