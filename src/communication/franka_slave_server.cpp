@@ -32,7 +32,8 @@ public:
        : socket_( io_service, udp::endpoint(udp::v4(), port))
     {
         std::cout << "Tis is a UDP server" << std::endl;
-        intiialize_robot(slave_ip);
+        do_receive();
+        // intiialize_robot(slave_ip);
     }
 
     bool intiialize_robot(char* slave_ip)
@@ -47,10 +48,16 @@ public:
 
                     std::stringstream ss;
                     ss << _slave_state;
-                    std::cout << "Read slave states " << std::endl;
-                               
+
+                    // if (shouldReceive)
+                    // {
+                    //     std::cout << "Read slave states " << std::endl;
+                    //     shouldReceive = false;
+                    //     do_receive();
+                    // }
+
                     // size_t reply_length = socket_.receive_from( boost::asio::buffer(receive_data_, max_length), slave_endpoint);
-                    // std::size_t sentBytes = socket_.send_to(boost::asio::buffer(ss.str()), slave_endpoint);
+                    // std::size_t sentBytes = 0; socket_.send_to(boost::asio::buffer(ss.str()), slave_endpoint);
                     // std::cout << "Sent (from slave-server): " << (int) sentBytes << "\tReceived (from master-client)" << (int) reply_length << std::endl;
                
                     // if (shouldReceive)
@@ -83,6 +90,7 @@ public:
 
     void do_receive() 
     {
+        std::cout << "Setting up async read. " << std::endl;
         socket_.async_receive_from(
         boost::asio::buffer(receive_data_, max_length), slave_endpoint,
         [this](boost::system::error_code ec, std::size_t bytes_recvd)
@@ -91,10 +99,11 @@ public:
             {
                 std::cout << "Received a msg from a master to slave: " << (int) bytes_recvd << std::endl;
                 memset( receive_data_, 0, sizeof(receive_data_) );
+
                 std::stringstream ss;
                 ss << "Data from slave (server) to master (client)";  //_slave_state;
                 do_send(ss);
-            }
+            }            
             else
             {
                 do_receive();
@@ -184,4 +193,7 @@ int main(int argc , char* argv[])
     boost::asio::io_service io_service;
     server s(io_service, port, argv[2] );
     io_service.run();
+
+    std::cout << "bye bye server! " << std::endl;
+    return 0;
 } 
