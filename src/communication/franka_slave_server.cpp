@@ -47,9 +47,11 @@ public:
 
                     std::stringstream ss;
                     ss << _slave_state;
-                    size_t reply_length = socket_.receive_from( boost::asio::buffer(receive_data_, max_length), slave_endpoint);
-                    std::size_t sentBytes = socket_.send_to(boost::asio::buffer(ss.str()), slave_endpoint);
-                    std::cout << "Sent (from slave-server): " << (int) sentBytes << "\tReceived (from master-client)" << (int) reply_length << std::endl;
+                    std::cout << "Read slave states " << std::endl;
+                               
+                    // size_t reply_length = socket_.receive_from( boost::asio::buffer(receive_data_, max_length), slave_endpoint);
+                    // std::size_t sentBytes = socket_.send_to(boost::asio::buffer(ss.str()), slave_endpoint);
+                    // std::cout << "Sent (from slave-server): " << (int) sentBytes << "\tReceived (from master-client)" << (int) reply_length << std::endl;
                
                     // if (shouldReceive)
                     // {

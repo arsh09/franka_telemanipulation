@@ -51,10 +51,11 @@ public:
                     _master_state = robot_state;
                     std::stringstream ss;
                     ss << _master_state;
+                    std::cout << "Read master states: " << std::endl;
 
-                    std::size_t sentBytes = socket_.send_to(boost::asio::buffer(ss.str()), slave_endpoint);
-                    size_t reply_length = socket_.receive_from( boost::asio::buffer(receive_data_, max_length), master_endpoint);
-                    std::cout << "Sent (from master-client): " << (int) sentBytes << "\tReceived (from slave-server)" << (int) reply_length << std::endl;
+                    // std::size_t sentBytes = socket_.send_to(boost::asio::buffer(ss.str()), slave_endpoint);
+                    // size_t reply_length = socket_.receive_from( boost::asio::buffer(receive_data_, max_length), master_endpoint);
+                    // std::cout << "Sent (from master-client): " << (int) sentBytes << "\tReceived (from slave-server)" << (int) reply_length << std::endl;
 
                     // do_send(ss);
 
