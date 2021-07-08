@@ -38,6 +38,10 @@ public:
         slave_endpoint = *resolver.resolve( query );
         std::cout << "I am a UDP client" << std::endl;
 
+        std::stringstream ss;
+        ss << "";
+        do_send(ss);
+
         boost::thread(boost::bind(&boost::asio::io_service::run, &io_service));        
         intiialize_robot(master_ip);
     }
@@ -70,7 +74,7 @@ public:
             {   
                 if (bytes_sent > 0)
                 {
-                    std::cout << "Sent from master to slave: " << (int) bytes_sent << std::endl;
+                    // std::cout << "Sent from master to slave: " << (int) bytes_sent << std::endl;
                 }
                 do_receive();                
             });
@@ -84,7 +88,8 @@ public:
         {
             if (!ec && bytes_recvd > 0)
             {
-                std::cout << "Received from slave to master: " << (int) bytes_recvd << std::endl;
+                state_parser_json(receive_data_ , _slave_state);
+                memset( receive_data_, 0, sizeof(receive_data_) );
             }
             else
             {
@@ -145,7 +150,7 @@ public:
         }
         catch(json::exception& e)
         {
-            std::cout << e.what() << std::endl;
+            std::cout << "Parse Error: " << e.what() << std::endl;
             return false;
         }
     }
@@ -174,7 +179,10 @@ int main(int argc , char* argv[])
 
     boost::asio::io_service io_service;
     client c(io_service, argv[1], argv[2], argv[3]) ;
-    io_service.run();
+    // io_service.run();
+
+    std::cout << "bye bye client! " << std::endl;
+    return 0;
 }
 
 

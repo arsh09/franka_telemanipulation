@@ -66,7 +66,7 @@ public:
         {   
             if (bytes_sent > 0)
             {               
-                std::cout << "Sent from slave to master:  " << (int) bytes_sent << std::endl;
+                // std::cout << "Sent from slave to master:  " << (int) bytes_sent << std::endl;
             }
             do_receive();                
         });
