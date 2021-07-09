@@ -80,7 +80,10 @@ public:
         {
             if (bytes_recvd > 0)
             {
-                std::cout << "Received a msg from a master to slave: " << (int) bytes_recvd << std::endl;
+                std::cout << "Received master joints values: " << (int) bytes_recvd << std::endl;
+                // std::cout << "Received: " ;
+                // std::cout.write( receive_data_ );
+                // std::cout << std::endl; 
                 memset( receive_data_, 0, sizeof(receive_data_) );
                 std::stringstream ss;
                 ss << _slave_state;

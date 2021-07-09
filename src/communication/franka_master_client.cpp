@@ -38,9 +38,9 @@ public:
         slave_endpoint = *resolver.resolve( query );
         std::cout << "I am a UDP client" << std::endl;
 
-        std::stringstream ss;
-        ss << "";
-        do_send(ss);
+        std::stringstream _emptyMsg;
+        _emptyMsg << "";
+        do_send(_emptyMsg);
 
         boost::thread(boost::bind(&boost::asio::io_service::run, &io_service));        
         intiialize_robot(master_ip);
@@ -55,9 +55,10 @@ public:
             robot.read(  [this] (const franka::RobotState& robot_state) 
                 {   
                     _master_state = robot_state;
-                    std::stringstream ss;
-                    ss << _master_state;
-                    do_send(ss);
+
+
+                    do_send( _master_state );
+
                     return true;
                 });
         } 
@@ -79,6 +80,33 @@ public:
                 do_receive();                
             });
     }
+ 
+    void do_send(franka::RobotState& _state)
+    {
+        std::stringstream _stream;
+        _stream << _state;
+        do_send(_stream);
+        socket_.async_send_to( boost::asio::buffer(_stream.str()), slave_endpoint, [this](boost::system::error_code ec, std::size_t bytes_sent)
+            {   
+                if (bytes_sent > 0)
+                {
+                    // std::cout << "Sent from master to slave: " << (int) bytes_sent << std::endl;
+                }
+                do_receive();                
+            });
+    }
+ 
+    void do_send( std::array<double, 7>& q)
+    {
+        socket_.async_send_to( boost::asio::buffer( q ), slave_endpoint, [this](boost::system::error_code ec, std::size_t bytes_sent)
+            {   
+                if (bytes_sent > 0)
+                {
+                    // std::cout << "Sent from master to slave: " << (int) bytes_sent << std::endl;
+                }
+                do_receive();                
+            });
+    }
 
     void do_receive() 
     { 
@@ -88,7 +116,8 @@ public:
         {
             if (!ec && bytes_recvd > 0)
             {
-                state_parser_json(receive_data_ , _slave_state);
+                // state_parser_json(receive_data_ , _slave_state);
+                std::cout << "Received data from slave: " << (int) bytes_recvd << std::endl;
                 memset( receive_data_, 0, sizeof(receive_data_) );
             }
             else
