@@ -117,6 +117,9 @@ public:
             {
                 state_parser_json(receive_data_ , _slave_state);
                 std::cout << "Received data from slave: " << (int) bytes_recvd << std::endl;
+                std::string _s = "Slave joints: ";
+                print_array( _slave_state.q,  _s);
+
                 memset( receive_data_, 0, sizeof(receive_data_) );
             }
             else
@@ -124,6 +127,16 @@ public:
                 do_receive();
             } 
         });
+    }
+
+    void print_array(std::array<double, 7> &arr, std::string &name)
+    {   
+        std::cout << name.c_str() << ":  " ;
+        for ( int i = 0; i < arr.size(); i++ )
+        {
+            std::cout << arr[i] << " , " ;
+        }
+        std::cout << std::endl;
     }
 
     bool state_parser_json(std::string s, franka::RobotState& robot_state)
@@ -165,7 +178,7 @@ public:
             // robot_state.m_ee = state["m_ee"];
             // robot_state.m_load = state["m_load"];
             // robot_state.m_total = state["m_total"];
-            // robot_state.q = state["q"];
+            robot_state.q = state["q"];
             // robot_state.q_d = state["q_d"];
             // robot_state.robot_mode = state["robot_mode"];
             // robot_state.tau_J = state["tau_J"];

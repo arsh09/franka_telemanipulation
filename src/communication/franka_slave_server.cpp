@@ -89,10 +89,12 @@ public:
         boost::asio::buffer(receive_data_, max_length), slave_endpoint,
         [this](boost::system::error_code ec, std::size_t bytes_recvd)
         {
-            if (bytes_recvd > 0)
+            if (bytes_recvd > 50)
             {
                 std::cout << "Received master joints values: " << (int) bytes_recvd << std::endl;
                 state_parser_json(receive_data_ , _master_state);
+                std::string _s = "Master joints: ";
+                print_array(_master_state.q, _s);
                 memset( receive_data_, 0, sizeof(receive_data_) );
                 std::stringstream ss;
                 ss << _slave_state;
@@ -103,6 +105,17 @@ public:
                 do_receive();
             }
         });
+    }
+
+
+    void print_array(std::array<double, 7> &arr, std::string &name)
+    {   
+        std::cout << name.c_str() ;
+        for ( int i = 0; i < arr.size(); i++ )
+        {
+            std::cout << arr[i] << " , " ;
+        }
+        std::cout << std::endl;
     }
 
     bool state_parser_json(std::string s, franka::RobotState& robot_state)
@@ -144,7 +157,7 @@ public:
             // robot_state.m_ee = state["m_ee"];
             // robot_state.m_load = state["m_load"];
             // robot_state.m_total = state["m_total"];
-            // robot_state.q = state["q"];
+            robot_state.q = state["q"];
             // robot_state.q_d = state["q_d"];
             // robot_state.robot_mode = state["robot_mode"];
             // robot_state.tau_J = state["tau_J"];
