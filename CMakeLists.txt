@@ -99,6 +99,7 @@ target_link_libraries(franka_master
   ${Franka_LIBRARIES} 
   ${Boost_LIBRARIES}
   nlohmann_json::nlohmann_json
+  examples_common
 )
 
 add_executable(franka_slave src/communication/franka_slave_server.cpp)

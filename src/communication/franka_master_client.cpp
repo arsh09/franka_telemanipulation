@@ -13,8 +13,15 @@
 #include <iostream>
 #include <stdlib.h>   
 
+// #include <Eigen/Dense>
+#include <eigen3/Eigen/Dense>
+
 #include <franka/exception.h>
 #include <franka/robot.h>
+#include <franka/duration.h>
+#include <franka/model.h>
+#include "examples_common.h"
+
 
 #include <nlohmann/json.hpp>
 // for convenience
@@ -24,7 +31,7 @@ using json = nlohmann::json;
 #include <boost/asio.hpp>
 using boost::asio::ip::udp;
 
-enum { max_length = 8192 };
+
 
 class client 
 {
@@ -53,19 +60,114 @@ public:
         try 
         {
             franka::Robot robot(master_ip);
-            size_t count = 0;
-            robot.read(  [this] (const franka::RobotState& robot_state) 
-                {   
-                    _master_state = robot_state;
-                    do_send( _master_state );
-                    return true;
-                });
+
+            setDefaultBehavior(robot);
+            setup_compliance();
+            setup_impendance_control(robot);
+
+            // robot.read(  [this] (const franka::RobotState& robot_state) 
+            //     {   
+            //         _master_state = robot_state;
+            //         do_send( _master_state );
+            //         return true;
+            //     });
         } 
         catch (franka::Exception const& e) 
         {
             std::cout << e.what() << std::endl;
             return false;
         }
+    }
+
+
+    void setup_compliance()
+    {
+        stiffness = Eigen::MatrixXd(6,6);
+        damping = Eigen::MatrixXd(6,6);
+        stiffness.setZero();
+        stiffness.topLeftCorner(3, 3) << translational_stiffness * Eigen::MatrixXd::Identity(3, 3);
+        stiffness.bottomRightCorner(3, 3) << rotational_stiffness * Eigen::MatrixXd::Identity(3, 3);
+        damping.setZero();
+        damping.topLeftCorner(3, 3) << 2.0 * sqrt(translational_stiffness) *
+                                            Eigen::MatrixXd::Identity(3, 3);
+        damping.bottomRightCorner(3, 3) << 2.0 * sqrt(rotational_stiffness) *
+                                                Eigen::MatrixXd::Identity(3, 3);
+    }
+
+    void setup_impendance_control(franka::Robot& robot)
+    {
+        setup_compliance();
+        franka::Model model = robot.loadModel();
+        franka::RobotState initial_state = robot.readOnce();
+        // equilibrium point is the initial position
+        initial_transform = Eigen::Affine3d (Eigen::Matrix4d::Map(initial_state.O_T_EE.data()));
+        position_d = Eigen::Vector3d (initial_transform.translation());
+        orientation_d = Eigen::Quaterniond (initial_transform.linear());
+
+        // set collision behavior
+        robot.setCollisionBehavior({{100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0}},
+                                {{100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0}},
+                                {{100.0, 100.0, 100.0, 100.0, 100.0, 100.0}},
+                                {{100.0, 100.0, 100.0, 100.0, 100.0, 100.0}});
+
+
+        // define callback for the torque control loop
+        std::function<franka::Torques(const franka::RobotState&, franka::Duration)>
+            impedance_control_callback = [this, &model](const franka::RobotState& robot_state,
+                                            franka::Duration /*duration*/) -> franka::Torques 
+        {
+            _master_state = robot_state;
+            do_send( _master_state );
+
+            // get state variables
+            std::array<double, 7> coriolis_array = model.coriolis(robot_state);
+            std::array<double, 42> jacobian_array =
+                model.zeroJacobian(franka::Frame::kEndEffector, robot_state);
+
+            // convert to Eigen
+            Eigen::Map<const Eigen::Matrix<double, 7, 1> > coriolis(coriolis_array.data());
+            Eigen::Map<const Eigen::Matrix<double, 6, 7> > jacobian(jacobian_array.data());
+            Eigen::Map<const Eigen::Matrix<double, 7, 1> > q(robot_state.q.data());
+            Eigen::Map<const Eigen::Matrix<double, 7, 1> > dq(robot_state.dq.data());
+            Eigen::Affine3d transform(Eigen::Matrix4d::Map(robot_state.O_T_EE.data()));
+            Eigen::Vector3d position(transform.translation());
+            Eigen::Quaterniond orientation(transform.linear());
+
+            // compute error to desired equilibrium pose
+            // position error
+            Eigen::Matrix<double, 6, 1> error;
+            error.head(3) << position - position_d;
+
+            // orientation error
+            // "difference" quaternion
+            if (orientation_d.coeffs().dot(orientation.coeffs()) < 0.0) {
+            orientation.coeffs() << -orientation.coeffs();
+            }
+            Eigen::Quaterniond error_quaternion(orientation * orientation_d.inverse());
+            // convert to axis angle
+            Eigen::AngleAxisd error_quaternion_angle_axis(error_quaternion);
+            // compute "orientation error"
+            error.tail(3) << error_quaternion_angle_axis.axis() * error_quaternion_angle_axis.angle();
+
+            // compute control
+            Eigen::VectorXd tau_task(7), tau_d(7);
+
+            // Spring damper system with damping ratio=1
+            tau_task << jacobian.transpose() * (-stiffness * error - damping * (jacobian * dq));
+            tau_d << tau_task + coriolis;
+
+            std::array<double, 7> tau_d_array{};
+            Eigen::VectorXd::Map(&tau_d_array[0], 7) = tau_d;
+            return tau_d_array;
+        };
+
+        // start real-time control loop
+        std::cout << "WARNING: Collision thresholds are set to high values. "
+                << "Make sure you have the user stop at hand!" << std::endl
+                << "After starting try to push the robot and see how it reacts." << std::endl
+                << "Press Enter to continue..." << std::endl;
+        std::cin.ignore();
+        robot.control(impedance_control_callback);
     }
 
     void do_send(std::stringstream& _stream)
@@ -198,15 +300,31 @@ public:
 
 
 private:
+    // networking stuff
     udp::socket socket_;
     udp::endpoint master_endpoint;
     udp::endpoint slave_endpoint;
     int max_length = 8192;
     char send_data_[8192];
     char receive_data_[8192];
-    bool shouldReceive = true;
     franka::RobotState _master_state; 
     franka::RobotState _slave_state;
+
+    // robot stuff
+    // franka::Robot robot ; 
+    // franka::Model model ;
+
+    // impedance control stuff
+    const double translational_stiffness{150.0};
+    const double rotational_stiffness{10.0};
+    Eigen::MatrixXd stiffness;
+    Eigen::MatrixXd damping;
+
+    // equilibrium point is the initial position
+    Eigen::Affine3d initial_transform;
+    Eigen::Vector3d position_d;
+    Eigen::Quaterniond orientation_d;
+
 
 }; // end of client
 
