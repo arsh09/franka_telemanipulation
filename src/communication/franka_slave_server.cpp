@@ -72,6 +72,18 @@ public:
         });
     }
 
+    void do_send( std::array<double, 7>& q)
+    {
+        socket_.async_send_to( boost::asio::buffer( q ), slave_endpoint, [this](boost::system::error_code ec, std::size_t bytes_sent)
+            {   
+                if (bytes_sent > 0)
+                {
+                    // std::cout << "Sent from master to slave: " << (int) bytes_sent << std::endl;
+                }
+                do_receive();                
+            });
+    }
+
     void do_receive() 
     {
         socket_.async_receive_from(
@@ -85,9 +97,10 @@ public:
                 // std::cout.write( receive_data_ );
                 // std::cout << std::endl; 
                 memset( receive_data_, 0, sizeof(receive_data_) );
-                std::stringstream ss;
-                ss << _slave_state;
-                do_send(ss);
+                // std::stringstream ss;
+                // ss << _slave_state;
+                // do_send(ss);
+                do_send( _slave_state.q );
             }            
             else
             {

@@ -57,7 +57,7 @@ public:
                     _master_state = robot_state;
 
 
-                    do_send( _master_state );
+                    do_send( _master_state.q );
 
                     return true;
                 });
@@ -183,6 +183,7 @@ public:
             return false;
         }
     }
+
 
 private:
     udp::socket socket_;
