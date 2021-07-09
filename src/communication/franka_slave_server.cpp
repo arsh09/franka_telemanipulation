@@ -13,8 +13,15 @@
 #include <iostream>
 #include <stdlib.h>   
 
+
+// #include <Eigen/Dense>
+#include <eigen3/Eigen/Dense>
+
 #include <franka/exception.h>
 #include <franka/robot.h>
+#include <franka/duration.h>
+#include <franka/model.h>
+#include "examples_common.h"
 
 #include <nlohmann/json.hpp>
 // for convenience
@@ -37,26 +44,85 @@ public:
         std::cout << "Tis is a UDP server" << std::endl;
         do_receive();
         boost::thread(boost::bind(&boost::asio::io_service::run, &io_service));
-        intiialize_robot(slave_ip);
+        initialize_robot(slave_ip);
     }
 
-    bool intiialize_robot(char* slave_ip)
+    bool initialize_robot(char* slave_ip)
     {
         try 
         {
             franka::Robot robot(slave_ip);
-            size_t count = 0;
-            robot.read(  [this] (const franka::RobotState& robot_state) 
-                {   
-                    _slave_state = robot_state;
-                    return true;                
-                });
+            setDefaultBehavior(robot);
+            setup_initial_pose(robot);
+            setup_position_control(robot);
+
+            // setup_state_read_loop(robot);
         } 
         catch (franka::Exception const& e) 
         {
             std::cout << e.what() << std::endl;
             return false;
         }
+    }
+
+    void setup_initial_pose(franka::Robot& robot)
+    {
+        std::array<double, 7> q_goal = {{0, -M_PI_4, 0, -3 * M_PI_4, 0, M_PI_2, M_PI_4}};
+        MotionGenerator motion_generator(0.5, q_goal);
+        std::cout << "WARNING: This example will move the robot to a pre-configured pose! "
+                << "Please make sure to have the user stop button at hand!" << std::endl
+                << "Press Enter to continue..." << std::endl;
+        std::cin.ignore();
+        robot.control(motion_generator);
+        std::cout << "Finished moving to initial joint configuration." << std::endl;   
+    }
+
+    void setup_state_read_loop(franka::Robot& robot)
+    {
+        robot.read(  [this] (const franka::RobotState& robot_state) 
+        {   
+            _slave_state = robot_state;
+            return true;                
+        });
+    }
+
+    void setup_position_control(franka::Robot& robot)
+    {
+        // Set additional parameters always before the control loop, NEVER in the control loop!
+        // Set collision behavior.
+        robot.setCollisionBehavior(
+            {{20.0, 20.0, 18.0, 18.0, 16.0, 14.0, 12.0}}, {{20.0, 20.0, 18.0, 18.0, 16.0, 14.0, 12.0}},
+            {{20.0, 20.0, 18.0, 18.0, 16.0, 14.0, 12.0}}, {{20.0, 20.0, 18.0, 18.0, 16.0, 14.0, 12.0}},
+            {{20.0, 20.0, 20.0, 25.0, 25.0, 25.0}}, {{20.0, 20.0, 20.0, 25.0, 25.0, 25.0}},
+            {{20.0, 20.0, 20.0, 25.0, 25.0, 25.0}}, {{20.0, 20.0, 20.0, 25.0, 25.0, 25.0}});
+
+        std::array<double, 7> initial_position;
+        double time = 0.0;
+
+        robot.control([this, &initial_position, &time](const franka::RobotState& robot_state, franka::Duration period) -> franka::JointPositions 
+        {
+            time += period.toSec();
+            if (time == 0.0 || !is_receive_state) 
+            { 
+                initial_position = robot_state.q_d;
+            }
+            else
+            {
+                initial_position = _master_state.q;
+            }
+
+            franka::JointPositions output = {{
+                initial_position[0], initial_position[1], initial_position[2], 
+                initial_position[3], initial_position[4],  initial_position[5],
+                initial_position[6] 
+            }};
+
+            if (time >= 50.0) {
+                std::cout << std::endl << "Finished motion, shutting down example" << std::endl;
+                return franka::MotionFinished(output);
+            }
+            return output;
+        });
     }
 
     void do_send(std::stringstream& _stream)
@@ -91,6 +157,7 @@ public:
         {
             if (bytes_recvd > 50)
             {
+                is_receive_state = true;
                 std::cout << "Received master joints values: " << (int) bytes_recvd << std::endl;
                 state_parser_json(receive_data_ , _master_state);
                 std::string _s = "Master joints: ";
@@ -106,7 +173,6 @@ public:
             }
         });
     }
-
 
     void print_array(std::array<double, 7> &arr, std::string &name)
     {   
@@ -183,7 +249,8 @@ private:
     char receive_data_[8192];
     franka::RobotState _master_state; 
     franka::RobotState _slave_state;
-    bool shouldReceive = true;
+    bool is_receive_state = false;
+    
 
 }; // end of client
 

@@ -52,25 +52,20 @@ public:
         do_send(_emptyMsg);
 
         boost::thread(boost::bind(&boost::asio::io_service::run, &io_service));        
-        intiialize_robot(master_ip);
+        initialize_robot(master_ip);
     }
 
-    bool intiialize_robot(char* master_ip)
+    bool initialize_robot(char* master_ip)
     {
         try 
         {
             franka::Robot robot(master_ip);
-
             setDefaultBehavior(robot);
+            setup_initial_pose(robot);
+
             setup_compliance();
             setup_impendance_control(robot);
 
-            // robot.read(  [this] (const franka::RobotState& robot_state) 
-            //     {   
-            //         _master_state = robot_state;
-            //         do_send( _master_state );
-            //         return true;
-            //     });
         } 
         catch (franka::Exception const& e) 
         {
@@ -79,6 +74,27 @@ public:
         }
     }
 
+    void setup_initial_pose(franka::Robot& robot)
+    {
+        std::array<double, 7> q_goal = {{0, -M_PI_4, 0, -3 * M_PI_4, 0, M_PI_2, M_PI_4}};
+        MotionGenerator motion_generator(0.5, q_goal);
+        std::cout << "WARNING: This example will move the robot to a pre-configured pose! "
+                << "Please make sure to have the user stop button at hand!" << std::endl
+                << "Press Enter to continue..." << std::endl;
+        std::cin.ignore();
+        robot.control(motion_generator);
+        std::cout << "Finished moving to initial joint configuration." << std::endl;   
+    }
+
+    void setup_state_read_loop(franka::Robot& robot)
+    {
+        robot.read(  [this] (const franka::RobotState& robot_state) 
+        {   
+            _master_state = robot_state;
+            do_send( _master_state );
+            return true;
+        });
+    }
 
     void setup_compliance()
     {

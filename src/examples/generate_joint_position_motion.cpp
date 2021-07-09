@@ -44,27 +44,30 @@ int main(int argc, char** argv) {
 
     std::array<double, 7> initial_position;
     double time = 0.0;
-    robot.control([&initial_position, &time](const franka::RobotState& robot_state,
-                                             franka::Duration period) -> franka::JointPositions {
-      time += period.toSec();
 
-      if (time == 0.0) {
-        initial_position = robot_state.q_d;
-      }
+    // robot.control([&initial_position, &time](const franka::RobotState& robot_state,
+    //                                          franka::Duration period) -> franka::JointPositions {
+    //   time += period.toSec();
 
-      double delta_angle = M_PI / 8.0 * (1 - std::cos(M_PI / 2.5 * time));
+    //   if (time == 0.0) {
+    //     initial_position = robot_state.q_d;
+    //   }
 
-      franka::JointPositions output = {{initial_position[0], initial_position[1],
-                                        initial_position[2], initial_position[3] + delta_angle,
-                                        initial_position[4] + delta_angle, initial_position[5],
-                                        initial_position[6] + delta_angle}};
+    //   double delta_angle = M_PI / 8.0 * (1 - std::cos(M_PI / 2.5 * time));
 
-      if (time >= 5.0) {
-        std::cout << std::endl << "Finished motion, shutting down example" << std::endl;
-        return franka::MotionFinished(output);
-      }
-      return output;
-    });
+    //   franka::JointPositions output = {{initial_position[0], initial_position[1],
+    //                                     initial_position[2], initial_position[3] + delta_angle,
+    //                                     initial_position[4] + delta_angle, initial_position[5],
+    //                                     initial_position[6] + delta_angle}};
+
+    //   if (time >= 5.0) {
+    //     std::cout << std::endl << "Finished motion, shutting down example" << std::endl;
+    //     return franka::MotionFinished(output);
+    //   }
+    //   return output;
+    // });
+
+
   } catch (const franka::Exception& e) {
     std::cout << e.what() << std::endl;
     return -1;
