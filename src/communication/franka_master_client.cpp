@@ -32,6 +32,8 @@ public:
     client(boost::asio::io_service& io_service, char* server_port, char* server_ip, char* master_ip)
        : socket_( io_service, udp::endpoint(udp::v4(), 0))
     {
+        memset( receive_data_, 0, sizeof(receive_data_) );
+
         // udp client
         udp::resolver resolver(io_service);
         udp::resolver::query query( server_ip , server_port );
@@ -55,10 +57,7 @@ public:
             robot.read(  [this] (const franka::RobotState& robot_state) 
                 {   
                     _master_state = robot_state;
-
-
-                    do_send( _master_state.q );
-
+                    do_send( _master_state );
                     return true;
                 });
         } 
@@ -114,9 +113,9 @@ public:
         boost::asio::buffer(receive_data_, max_length), master_endpoint,
         [this](boost::system::error_code ec, std::size_t bytes_recvd)
         {
-            if (!ec && bytes_recvd > 0)
+            if (!ec && bytes_recvd > 50)
             {
-                // state_parser_json(receive_data_ , _slave_state);
+                state_parser_json(receive_data_ , _slave_state);
                 std::cout << "Received data from slave: " << (int) bytes_recvd << std::endl;
                 memset( receive_data_, 0, sizeof(receive_data_) );
             }
@@ -132,46 +131,46 @@ public:
         try
         {
             auto state = json::parse(s);
-            robot_state.EE_T_K = state["EE_T_K"];
-            robot_state.F_T_EE = state["F_T_EE"];
-            robot_state.F_x_Cee = state["F_x_Cee"];
-            robot_state.F_x_Cload = state["F_x_Cload"];
-            robot_state.F_x_Ctotal = state["F_x_Ctotal"];
-            robot_state.I_ee = state["I_ee"];
-            robot_state.I_load = state["I_load"];
-            robot_state.I_total = state["I_total"];
-            robot_state.K_F_ext_hat_K = state["K_F_ext_hat_K"];
-            robot_state.O_F_ext_hat_K = state["O_F_ext_hat_K"];
-            robot_state.O_T_EE = state["O_T_EE"];
-            robot_state.O_T_EE_c = state["O_T_EE_c"];
-            robot_state.O_T_EE_d = state["O_T_EE_d"];
-            robot_state.O_dP_EE_c = state["O_dP_EE_c"];
-            robot_state.O_dP_EE_d = state["O_dP_EE_d"];
-            robot_state.O_ddP_EE_c = state["O_ddP_EE_c"];
-            robot_state.cartesian_collision = state["cartesian_collision"];
-            robot_state.cartesian_contact = state["cartesian_contact"];
-            robot_state.control_command_success_rate = state["control_command_success_rate"];
-            robot_state.ddelbow_c = state["ddelbow_c"];
-            robot_state.ddq_d = state["ddq_d"];
-            robot_state.delbow_c = state["delbow_c"];
-            robot_state.dq = state["dq"];
-            robot_state.dq_d = state["dq_d"];
-            robot_state.dtau_J = state["dtau_J"];
-            robot_state.dtheta = state["dtheta"];
-            robot_state.elbow = state["elbow"];
-            robot_state.elbow_c = state["elbow_c"];
-            robot_state.elbow_d = state["elbow_d"];
-            robot_state.joint_collision = state["joint_collision"];
-            robot_state.joint_contact = state["joint_contact"];
-            robot_state.m_ee = state["m_ee"];
-            robot_state.m_load = state["m_load"];
-            robot_state.m_total = state["m_total"];
-            robot_state.q = state["q"];
-            robot_state.q_d = state["q_d"];
-            robot_state.robot_mode = state["robot_mode"];
-            robot_state.tau_J = state["tau_J"];
-            robot_state.tau_ext_hat_filtered = state["tau_ext_hat_filtered"];
-            robot_state.theta = state["theta"];
+            // robot_state.EE_T_K = state["EE_T_K"];
+            // robot_state.F_T_EE = state["F_T_EE"];
+            // robot_state.F_x_Cee = state["F_x_Cee"];
+            // robot_state.F_x_Cload = state["F_x_Cload"];
+            // robot_state.F_x_Ctotal = state["F_x_Ctotal"];
+            // robot_state.I_ee = state["I_ee"];
+            // robot_state.I_load = state["I_load"];
+            // robot_state.I_total = state["I_total"];
+            // robot_state.K_F_ext_hat_K = state["K_F_ext_hat_K"];
+            // robot_state.O_F_ext_hat_K = state["O_F_ext_hat_K"];
+            // robot_state.O_T_EE = state["O_T_EE"];
+            // robot_state.O_T_EE_c = state["O_T_EE_c"];
+            // robot_state.O_T_EE_d = state["O_T_EE_d"];
+            // robot_state.O_dP_EE_c = state["O_dP_EE_c"];
+            // robot_state.O_dP_EE_d = state["O_dP_EE_d"];
+            // robot_state.O_ddP_EE_c = state["O_ddP_EE_c"];
+            // robot_state.cartesian_collision = state["cartesian_collision"];
+            // robot_state.cartesian_contact = state["cartesian_contact"];
+            // robot_state.control_command_success_rate = state["control_command_success_rate"];
+            // robot_state.ddelbow_c = state["ddelbow_c"];
+            // robot_state.ddq_d = state["ddq_d"];
+            // robot_state.delbow_c = state["delbow_c"];
+            // robot_state.dq = state["dq"];
+            // robot_state.dq_d = state["dq_d"];
+            // robot_state.dtau_J = state["dtau_J"];
+            // robot_state.dtheta = state["dtheta"];
+            // robot_state.elbow = state["elbow"];
+            // robot_state.elbow_c = state["elbow_c"];
+            // robot_state.elbow_d = state["elbow_d"];
+            // robot_state.joint_collision = state["joint_collision"];
+            // robot_state.joint_contact = state["joint_contact"];
+            // robot_state.m_ee = state["m_ee"];
+            // robot_state.m_load = state["m_load"];
+            // robot_state.m_total = state["m_total"];
+            // robot_state.q = state["q"];
+            // robot_state.q_d = state["q_d"];
+            // robot_state.robot_mode = state["robot_mode"];
+            // robot_state.tau_J = state["tau_J"];
+            // robot_state.tau_ext_hat_filtered = state["tau_ext_hat_filtered"];
+            // robot_state.theta = state["theta"];
             // robot_state.last_motion_errors = state["last_motion_errors"];
             // robot_state.last_motion_errors = state["last_motion_errors"];
             // robot_state.time = state["time"];
