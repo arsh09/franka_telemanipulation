@@ -234,9 +234,9 @@ public:
             if (!ec && bytes_recvd > 50)
             {
                 state_parser_json(receive_data_ , _slave_state);
-                std::cout << "Received data from slave: " << (int) bytes_recvd << std::endl;
-                std::string _s = "Master joints: ";
-                print_array( _master_state.q,  _s);
+                // std::cout << "Received data from slave: " << (int) bytes_recvd << std::endl;
+                // std::string _s = "Master joints: ";
+                // print_array( _master_state.q,  _s);
 
                 memset( receive_data_, 0, sizeof(receive_data_) );
             }

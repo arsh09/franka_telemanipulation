@@ -158,10 +158,10 @@ public:
             if (bytes_recvd > 50)
             {
                 is_receive_state = true;
-                std::cout << "Received master joints values: " << (int) bytes_recvd << std::endl;
-                state_parser_json(receive_data_ , _master_state);
-                std::string _s = "Master joints: ";
-                print_array(_master_state.q, _s);
+                // std::cout << "Received master joints values: " << (int) bytes_recvd << std::endl;
+                // state_parser_json(receive_data_ , _master_state);
+                // std::string _s = "Master joints: ";
+                // print_array(_master_state.q, _s);
                 memset( receive_data_, 0, sizeof(receive_data_) );
                 std::stringstream ss;
                 ss << _slave_state;
