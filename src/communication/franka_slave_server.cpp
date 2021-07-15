@@ -67,23 +67,24 @@ public:
     {
         while (true)
         {
-            franka::RobotState fake_state;
+            // franka::RobotState fake_state;
 
-            fake_state.q = {fake_joint_values, fake_joint_values, fake_joint_values, fake_joint_values, fake_joint_values, fake_joint_values, fake_joint_values};
-            fake_joint_values += 0.1;
-            if (fake_joint_values > 1) fake_joint_values = 0.1;
+            // fake_state.q = {fake_joint_values, fake_joint_values, fake_joint_values, fake_joint_values, fake_joint_values, fake_joint_values, fake_joint_values};
+            // fake_joint_values += 0.1;
+            // if (fake_joint_values > 1) fake_joint_values = 0.1;
             
-            _slave_state = fake_state;
+            // _slave_state = fake_state;
 
-            std::cout << "Joints: " ;
-            for ( int i = 0; i < _slave_state.q.size(); i++)
-            {
-                std::cout << _master_state.q.at(i) - _slave_state.q.at(i) << "  " ;
-            }
-            std::cout << std::endl;
+            // std::cout << "Joints: " ;
+            // for ( int i = 0; i < _slave_state.q.size(); i++)
+            // {
+            //     std::cout << _master_state.q.at(i) - _slave_state.q.at(i) << "  " ;
+            // }
+            // std::cout << std::endl;
 
-            do_send( fake_state );
-            boost::this_thread::sleep( boost::posix_time::milliseconds(10) );
+            // do_send( fake_state );
+
+            // boost::this_thread::sleep( boost::posix_time::milliseconds(10) );
         }
     }
 
@@ -176,12 +177,15 @@ public:
         boost::asio::buffer( msgIn.body.data(),  msgIn.body.size()), slave_endpoint,
         [this](boost::system::error_code ec, std::size_t bytes_recvd)
         {
-
-            if (!ec && bytes_recvd == received_bytes)
+            if (!ec && bytes_recvd > 0 )
             {
                 // master state received here (from master)
-                msgIn >> _master_state ;
-                if (debug) std::cout << "[Slave][Received][Bytes][" << slave_endpoint << "]" << bytes_recvd << std::endl;
+                msgIn.body.resize( bytes_recvd );
+                msgIn >> _master_state;
+                if (debug) std::cout << "[Slave][Received][Bytes][" << slave_endpoint << "]\t" << bytes_recvd  << std::endl;
+                print_array( _master_state.q , "Position");
+                print_array( _master_state.dq , "Speeds");
+                print_array( _master_state.tau_J , "Torques");
             }
 
             do_receive();
@@ -205,12 +209,24 @@ public:
             });
     }
 
-    void print_array(std::array<double, 7> &arr, std::string &name)
+    void print_array(std::array<double, 7> &arr, std::string name)
     {   
+        // std::string name = "Joints: ";
         std::cout << name.c_str() ;
         for ( int i = 0; i < arr.size(); i++ )
         {
-            std::cout << arr[i] << " , " ;
+            std::cout << "  " << arr[i] << " , " ;
+        }
+        std::cout << std::endl;
+    }
+
+    void print_array(std::vector<std::uint8_t> &arr)
+    {   
+        std::string  name = "Raw";
+        std::cout << name.c_str() << ":  " ;
+        for ( int i = 0; i < arr.size(); i++ )
+        {
+            std::cout << (int) arr[i] << " , " ;
         }
         std::cout << std::endl;
     }
@@ -228,7 +244,7 @@ private:
 
     double fake_joint_values = 0.1;
 
-    std::size_t received_bytes = 3048;
+    std::size_t received_bytes = 4096;
     teleop::message<CustomType> msgIn;
     teleop::message<CustomType> msgOut;
     

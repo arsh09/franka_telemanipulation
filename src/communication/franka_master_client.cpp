@@ -95,7 +95,7 @@ public:
             boost::this_thread::sleep( boost::posix_time::milliseconds(10) );
         }
     }
-
+ 
     void setup_initial_pose(franka::Robot& robot)
     {
         std::array<double, 7> q_goal = {{0, -M_PI_4, 0, -3 * M_PI_4, 0, M_PI_2, M_PI_4}};
@@ -113,6 +113,9 @@ public:
         robot.read(  [this] (const franka::RobotState& robot_state) 
         {   
             _master_state = robot_state;
+            print_array(_master_state.q, "Positions") ;
+            print_array(_master_state.dq, "Speeds") ;
+            print_array(_master_state.tau_J, "Torques") ;
             do_send( robot_state );
             return true;
         });
@@ -236,17 +239,27 @@ public:
         socket_.async_send_to( boost::asio::buffer( msg.body.data(), msg.body.size() ), slave_endpoint, 
         [this](boost::system::error_code ec, std::size_t bytes_sent)
             {   
-                if ( !ec && bytes_sent == received_bytes )
+                if ( !ec && bytes_sent > 0 ) // == received_bytes )
                 {
                     // master state sent here (to slave).
-                    if (debug) std::cout << "[Master][Sent][Bytes][" << slave_endpoint << "]" << bytes_sent << std::endl;
+                    if (debug) std::cout << "[Master][Sent][Bytes][" << slave_endpoint << "]\t" << bytes_sent << std::endl;
                 }             
             });
     }
 
-    void print_array(std::array<double, 7> &arr)
+    void print_array(std::array<double, 7> &arr, std::string name)
     {   
-        std::string  name = "Joints";
+        std::cout << name.c_str() << ":  " ;
+        for ( int i = 0; i < arr.size(); i++ )
+        {
+            std::cout << "  " << arr[i] << " , " ;
+        }
+        std::cout << std::endl;
+    }
+
+    void print_array(std::vector<std::uint8_t> &arr)
+    {   
+        std::string  name = "Raw";
         std::cout << name.c_str() << ":  " ;
         for ( int i = 0; i < arr.size(); i++ )
         {
@@ -264,7 +277,7 @@ private:
     int max_length = 8192;
     char send_data_[8192];
     char receive_data_[8192];
-    std::size_t received_bytes = 3048;
+    std::size_t received_bytes = 4096;
     franka::RobotState _master_state; 
     franka::RobotState _slave_state;
 
