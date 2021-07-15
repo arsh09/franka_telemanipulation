@@ -113,9 +113,9 @@ public:
         robot.read(  [this] (const franka::RobotState& robot_state) 
         {   
             _master_state = robot_state;
-            print_array(_master_state.q, "Positions") ;
-            print_array(_master_state.dq, "Speeds") ;
-            print_array(_master_state.tau_J, "Torques") ;
+            // print_array(_master_state.q, "Positions") ;
+            // print_array(_master_state.dq, "Speeds") ;
+            // print_array(_master_state.tau_J, "Torques") ;
             do_send( robot_state );
             return true;
         });
@@ -226,9 +226,9 @@ public:
                 msgIn.body.resize( bytes_recvd );
                 msgIn >> _slave_state;
                 if (debug) std::cout << "[Slave][Received][Bytes][" << slave_endpoint << "]\t" << bytes_recvd  << std::endl;
-                print_array( _master_state.q , "Position");
-                print_array( _master_state.dq , "Speeds");
-                print_array( _master_state.tau_J , "Torques");
+                // print_array( _master_state.q , "Position");
+                // print_array( _master_state.dq , "Speeds");
+                // print_array( _master_state.tau_J , "Torques");
             }
             do_receive();
         });

@@ -93,11 +93,10 @@ public:
         try 
         {
             franka::Robot robot(slave_ip);
-            setup_state_read_loop(robot);
-            // setDefaultBehavior(robot);
-            // setup_initial_pose(robot);
-            // setup_position_control(robot);
-
+            // setup_state_read_loop(robot);
+            setDefaultBehavior(robot);
+            setup_initial_pose(robot);
+            setup_position_control(robot);
         } 
         catch (franka::Exception const& e) 
         {
@@ -138,22 +137,27 @@ public:
             {{20.0, 20.0, 20.0, 25.0, 25.0, 25.0}}, {{20.0, 20.0, 20.0, 25.0, 25.0, 25.0}},
             {{20.0, 20.0, 20.0, 25.0, 25.0, 25.0}}, {{20.0, 20.0, 20.0, 25.0, 25.0, 25.0}});
 
-        std::array<double, 7> initial_position;
+        std::array<double, 7> initial_position = {0, 0, 0, 0, 0, 0, 0};
         double time = 0.0;
 
-        robot.control([this, &initial_position, &time](const franka::RobotState& robot_state, franka::Duration period) -> franka::JointPositions 
+        robot.control([this, &initial_position, &time](const franka::RobotState& robot_state, franka::Duration period) -> franka::Torques 
         {
-            time += period.toSec();
-            if (time == 0.0 ) 
-            { 
-                initial_position = robot_state.q_d;
-            }
-            else
-            {
-                initial_position = _master_state.q;
-            }
+            _slave_state = robot_state;
+            do_send(_slave_state);
 
-            franka::JointPositions output = {{
+            time += period.toSec();
+            
+            // initial_position = robot_state.q_d;
+            // if (time == 0.0 ) 
+            // { 
+            //     initial_position = robot_sta te.q_d;
+            // }
+            // else
+            // {
+            //     initial_position = _master_state.q;
+            // }
+
+            franka::Torques output = {{
                 initial_position[0], initial_position[1], initial_position[2], 
                 initial_position[3], initial_position[4],  initial_position[5],
                 initial_position[6] 
@@ -163,6 +167,7 @@ public:
                 std::cout << std::endl << "Finished motion, shutting down example" << std::endl;
                 return franka::MotionFinished(output);
             }
+
             return output;
         });
     }
@@ -183,9 +188,9 @@ public:
                 msgIn.body.resize( bytes_recvd );
                 msgIn >> _master_state;
                 if (debug) std::cout << "[Slave][Received][Bytes][" << slave_endpoint << "]\t" << bytes_recvd  << std::endl;
-                print_array( _master_state.q , "Position");
-                print_array( _master_state.dq , "Speeds");
-                print_array( _master_state.tau_J , "Torques");
+                // print_array( _master_state.q , "Position");
+                // print_array( _master_state.dq , "Speeds");
+                // print_array( _master_state.tau_J , "Torques");
             }
             do_receive();
         });
