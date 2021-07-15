@@ -23,9 +23,7 @@
 #include "examples_common.h"
 
 
-#include <nlohmann/json.hpp>
-// for convenience
-using json = nlohmann::json;
+#include "udp_messages.h"
 
 #include <boost/thread.hpp>
 #include <boost/asio.hpp>
@@ -33,9 +31,20 @@ using boost::asio::ip::udp;
 
 
 
+enum class CustomType : uint32_t
+{
+    RobotStateFull,
+    MasterJointsPosition,
+    SlaveJointsPosition,
+    MasterJointsVelociy,
+    SlaveJointsVelociy,
+};
+
+
 class client 
 {
 public:
+
     client(boost::asio::io_service& io_service, char* server_port, char* server_ip, char* master_ip)
        : socket_( io_service, udp::endpoint(udp::v4(), 0))
     {
@@ -45,11 +54,10 @@ public:
         udp::resolver resolver(io_service);
         udp::resolver::query query( server_ip , server_port );
         slave_endpoint = *resolver.resolve( query );
-        std::cout << "I am a UDP client" << std::endl;
+        
 
-        std::stringstream _emptyMsg;
-        _emptyMsg << "";
-        do_send(_emptyMsg);
+        // give some work to asio
+        do_receive_header();
 
         boost::thread(boost::bind(&boost::asio::io_service::run, &io_service));        
         initialize_robot(master_ip);
@@ -60,11 +68,12 @@ public:
         try 
         {
             franka::Robot robot(master_ip);
-            setDefaultBehavior(robot);
-            setup_initial_pose(robot);
+            setup_state_read_loop(robot);
 
-            setup_compliance();
-            setup_impendance_control(robot);
+            // setDefaultBehavior(robot);
+            // setup_initial_pose(robot);
+            // setup_compliance();
+            // setup_impendance_control(robot);
 
         } 
         catch (franka::Exception const& e) 
@@ -90,8 +99,8 @@ public:
     {
         robot.read(  [this] (const franka::RobotState& robot_state) 
         {   
-            _master_state = robot_state;
-            do_send( _master_state );
+            // _master_state = robot_state;
+            do_send_header( robot_state );
             return true;
         });
     }
@@ -133,8 +142,7 @@ public:
                                             franka::Duration /*duration*/) -> franka::Torques 
         {
             _master_state = robot_state;
-            do_send( _master_state );
-
+            
             // get state variables
             std::array<double, 7> coriolis_array = model.coriolis(robot_state);
             std::array<double, 42> jacobian_array =
@@ -186,65 +194,76 @@ public:
         robot.control(impedance_control_callback);
     }
 
-    void do_send(std::stringstream& _stream)
-    {
-        socket_.async_send_to( boost::asio::buffer(_stream.str()), slave_endpoint, [this](boost::system::error_code ec, std::size_t bytes_sent)
-            {   
-                if (bytes_sent > 0)
-                {
-                    // std::cout << "Sent from master to slave: " << (int) bytes_sent << std::endl;
-                }
-                do_receive();                
-            });
-    }
- 
-    void do_send(franka::RobotState& _state)
-    {
-        std::stringstream _stream;
-        _stream << _state;
-        do_send(_stream);
-        socket_.async_send_to( boost::asio::buffer(_stream.str()), slave_endpoint, [this](boost::system::error_code ec, std::size_t bytes_sent)
-            {   
-                if (bytes_sent > 0)
-                {
-                    // std::cout << "Sent from master to slave: " << (int) bytes_sent << std::endl;
-                }
-                do_receive();                
-            });
-    }
- 
-    void do_send( std::array<double, 7>& q)
-    {
-        socket_.async_send_to( boost::asio::buffer( q ), slave_endpoint, [this](boost::system::error_code ec, std::size_t bytes_sent)
-            {   
-                if (bytes_sent > 0)
-                {
-                    // std::cout << "Sent from master to slave: " << (int) bytes_sent << std::endl;
-                }
-                do_receive();                
-            });
-    }
-
-    void do_receive() 
+    void do_receive_header() 
     { 
         socket_.async_receive_from(
-        boost::asio::buffer(receive_data_, max_length), master_endpoint,
+        boost::asio::buffer(&msgIn.header, sizeof(teleop::message_header<CustomType>)), master_endpoint,
         [this](boost::system::error_code ec, std::size_t bytes_recvd)
         {
-            if (!ec && bytes_recvd > 50)
+            if (!ec && bytes_recvd > 0)
             {
-                state_parser_json(receive_data_ , _slave_state);
-                // std::cout << "Received data from slave: " << (int) bytes_recvd << std::endl;
-                // std::string _s = "Master joints: ";
-                // print_array( _master_state.q,  _s);
-
-                memset( receive_data_, 0, sizeof(receive_data_) );
+                if ( &msgIn.header.size > 0 )
+                {
+                    msgIn.body.resize(msgIn.header.size);
+                    do_receive_body();
+                }
             }
             else
             {
-                do_receive();
+                do_receive_header();
             } 
         });
+    }
+
+    void do_receive_body() 
+    { 
+        socket_.async_receive_from(
+        boost::asio::buffer( msgIn.body.data(), msgIn.header.size ), master_endpoint,
+        [this](boost::system::error_code ec, std::size_t bytes_recvd)
+        {
+            if (!ec && bytes_recvd > 0)
+            {
+                if ( &msgIn.header.size > 0 )
+                {
+                    msgIn.body.resize(msgIn.header.size);
+                    deserialize( _slave_state, msgIn);
+                }
+            }
+
+            do_receive_header();
+        });
+    }
+
+    void do_send_header(const franka::RobotState& robot_state) 
+    { 
+        msgOut.header.size = 0;
+        msgOut.body.clear();
+        
+        serialize(robot_state, msgOut);
+        socket_.async_send_to( boost::asio::buffer( &msgOut.header, sizeof(teleop::message_header<CustomType>)), slave_endpoint, [this](boost::system::error_code ec, std::size_t bytes_sent)
+            {   
+                if ( !ec && bytes_sent > 0 )
+                {
+                    if ( msgOut.header.size > 0 )
+                    {
+                        do_send_body();
+                    }
+                }             
+            });
+    }
+
+    void do_send_body() 
+    { 
+        socket_.async_send_to( boost::asio::buffer( msgOut.body.data(), msgOut.header.size ), slave_endpoint, [this](boost::system::error_code ec, std::size_t bytes_sent)
+            {   
+                if ( !ec && bytes_sent > 0 )
+                {
+                    if ( msgOut.header.size > 0 )
+                    {
+
+                    }
+                }             
+            });
     }
 
     void print_array(std::array<double, 7> &arr, std::string &name)
@@ -257,63 +276,108 @@ public:
         std::cout << std::endl;
     }
 
-    bool state_parser_json(std::string s, franka::RobotState& robot_state)
+    // order matters 
+    void deserialize(  franka::RobotState& robot_state , teleop::message<CustomType>& msg)
     {
-        try
-        {
-            auto state = json::parse(s);
-            // robot_state.EE_T_K = state["EE_T_K"];
-            // robot_state.F_T_EE = state["F_T_EE"];
-            // robot_state.F_x_Cee = state["F_x_Cee"];
-            // robot_state.F_x_Cload = state["F_x_Cload"];
-            // robot_state.F_x_Ctotal = state["F_x_Ctotal"];
-            // robot_state.I_ee = state["I_ee"];
-            // robot_state.I_load = state["I_load"];
-            // robot_state.I_total = state["I_total"];
-            // robot_state.K_F_ext_hat_K = state["K_F_ext_hat_K"];
-            // robot_state.O_F_ext_hat_K = state["O_F_ext_hat_K"];
-            // robot_state.O_T_EE = state["O_T_EE"];
-            // robot_state.O_T_EE_c = state["O_T_EE_c"];
-            // robot_state.O_T_EE_d = state["O_T_EE_d"];
-            // robot_state.O_dP_EE_c = state["O_dP_EE_c"];
-            // robot_state.O_dP_EE_d = state["O_dP_EE_d"];
-            // robot_state.O_ddP_EE_c = state["O_ddP_EE_c"];
-            // robot_state.cartesian_collision = state["cartesian_collision"];
-            // robot_state.cartesian_contact = state["cartesian_contact"];
-            // robot_state.control_command_success_rate = state["control_command_success_rate"];
-            // robot_state.ddelbow_c = state["ddelbow_c"];
-            // robot_state.ddq_d = state["ddq_d"];
-            // robot_state.delbow_c = state["delbow_c"];
-            // robot_state.dq = state["dq"];
-            // robot_state.dq_d = state["dq_d"];
-            // robot_state.dtau_J = state["dtau_J"];
-            // robot_state.dtheta = state["dtheta"];
-            // robot_state.elbow = state["elbow"];
-            // robot_state.elbow_c = state["elbow_c"];
-            // robot_state.elbow_d = state["elbow_d"];
-            // robot_state.joint_collision = state["joint_collision"];
-            // robot_state.joint_contact = state["joint_contact"];
-            // robot_state.m_ee = state["m_ee"];
-            // robot_state.m_load = state["m_load"];
-            // robot_state.m_total = state["m_total"];
-            robot_state.q = state["q"];
-            // robot_state.q_d = state["q_d"];
-            // robot_state.robot_mode = state["robot_mode"];
-            // robot_state.tau_J = state["tau_J"];
-            // robot_state.tau_ext_hat_filtered = state["tau_ext_hat_filtered"];
-            // robot_state.theta = state["theta"];
-            // robot_state.last_motion_errors = state["last_motion_errors"];
-            // robot_state.last_motion_errors = state["last_motion_errors"];
-            // robot_state.time = state["time"];
-            return true;
-        }
-        catch(json::exception& e)
-        {
-            std::cout << "Parse Error: " << e.what() << std::endl;
-            return false;
-        }
+        // msg    >> robot_state.time.toMSec();
+        // msg    >> robot_state.robot_mode;
+        msg    >> robot_state.control_command_success_rate;
+        // msg    >> robot_state.last_motion_errors;
+        // msg    >> robot_state.current_errors;
+        msg    >> robot_state.dtheta;
+        msg    >> robot_state.theta;
+        msg    >> robot_state.O_ddP_EE_c ;
+        msg    >> robot_state.O_dP_EE_c;
+        msg    >> robot_state.O_T_EE_c;
+        msg    >> robot_state.O_dP_EE_d;
+        msg    >> robot_state.K_F_ext_hat_K;
+        msg    >> robot_state.O_F_ext_hat_K;
+        msg    >> robot_state.tau_ext_hat_filtered;
+        msg    >> robot_state.cartesian_collision;
+        msg    >> robot_state.joint_collision;
+        msg    >> robot_state.cartesian_contact;
+        msg    >> robot_state.joint_contact;
+        msg    >> robot_state.ddq_d;
+        msg    >> robot_state.dq_d;
+        msg    >> robot_state.q_d ;
+        msg    >> robot_state.dq;
+        msg    >> robot_state.q ;
+        msg    >> robot_state.dtau_J; 
+        msg    >> robot_state.tau_J_d;   
+        msg    >> robot_state.tau_J;
+        msg    >> robot_state.ddelbow_c; 
+        msg    >> robot_state.delbow_c ;
+        msg    >> robot_state.elbow_c;
+        msg    >> robot_state.elbow_d ;
+        msg    >> robot_state.elbow ;
+        msg    >> robot_state.I_total; 
+        msg    >> robot_state.F_x_Ctotal ; 
+        msg    >> robot_state.m_total;
+        msg    >> robot_state.I_load;
+        msg    >> robot_state.F_x_Cload; 
+        msg    >> robot_state.m_load ;
+        msg    >> robot_state.I_ee ;
+        msg    >> robot_state.F_x_Cee;
+        msg    >> robot_state.m_ee  ;
+        msg    >> robot_state.EE_T_K ;
+        msg    >> robot_state.F_T_EE  ;
+        msg    >> robot_state.NE_T_EE;
+        msg    >> robot_state.F_T_NE ;
+        msg    >> robot_state.O_T_EE_d;
+        msg    >> robot_state.O_T_EE  ;
     }
 
+    // order matters 
+    void serialize( const franka::RobotState& robot_state , teleop::message<CustomType>& msg)
+    {
+    
+        msg    << robot_state.O_T_EE  ;
+        msg    << robot_state.O_T_EE_d;
+        msg    << robot_state.F_T_NE ;
+        msg    << robot_state.NE_T_EE;
+        msg    << robot_state.F_T_EE  ;
+        msg    << robot_state.EE_T_K;
+        msg    << robot_state.m_ee   ;
+        msg    << robot_state.F_x_Cee;
+        msg    << robot_state.I_ee ;
+        msg    << robot_state.m_load;
+        msg    << robot_state.F_x_Cload;  
+        msg    << robot_state.I_load;
+        msg    << robot_state.m_total;
+        msg    << robot_state.F_x_Ctotal;
+        msg    << robot_state.I_total   ;
+        msg    << robot_state.elbow;
+        msg    << robot_state.elbow_d;  
+        msg    << robot_state.elbow_c;
+        msg    << robot_state.delbow_c;
+        msg    << robot_state.ddelbow_c;   
+        msg    << robot_state.tau_J;
+        msg    << robot_state.tau_J_d;  
+        msg    << robot_state.dtau_J;
+        msg    << robot_state.q  ;
+        msg    << robot_state.dq;
+        msg    << robot_state.q_d; 
+        msg    << robot_state.dq_d;
+        msg    << robot_state.ddq_d;
+        msg    << robot_state.joint_contact;
+        msg    << robot_state.cartesian_contact;
+        msg    << robot_state.joint_collision;
+        msg    << robot_state.cartesian_collision;
+        msg    << robot_state.tau_ext_hat_filtered;
+        msg    << robot_state.O_F_ext_hat_K;
+        msg    << robot_state.K_F_ext_hat_K;
+        msg    << robot_state.O_dP_EE_d;
+        msg    << robot_state.O_T_EE_c;
+        msg    << robot_state.O_dP_EE_c;
+        msg    << robot_state.O_ddP_EE_c; 
+        msg    << robot_state.theta;
+        msg    << robot_state.dtheta;
+        // msg    << robot_state.current_errors;
+        // msg    << robot_state.last_motion_errors;
+        msg    << robot_state.control_command_success_rate;
+        // msg    << robot_state.robot_mode;
+        // msg    << robot_state.time.toMSec();
+    }
 
 private:
     // networking stuff
@@ -326,9 +390,9 @@ private:
     franka::RobotState _master_state; 
     franka::RobotState _slave_state;
 
-    // robot stuff
-    // franka::Robot robot ; 
-    // franka::Model model ;
+    teleop::message<CustomType> msgIn;
+    teleop::message<CustomType> msgOut;
+
 
     // impedance control stuff
     const double translational_stiffness{150.0};

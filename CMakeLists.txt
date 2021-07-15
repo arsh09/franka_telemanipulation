@@ -7,24 +7,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include(CTest)
 enable_testing()
 
-# Fetch Content only appears (by default) with CMake v3.1.1
-# include(FetchContent)
-# FetchContent_Declare(json
-#   GIT_REPOSITORY https://github.com/nlohmann/json.git
-#   GIT_TAG v3.7.3)
-
-#   FetchContent_GetProperties(json)
-#   if(NOT json_POPULATED)
-#     FetchContent_Populate(json)
-#     add_subdirectory(${json_SOURCE_DIR} ${json_BINARY_DIR} EXCLUDE_FROM_ALL)
-#   endif()
 set(JSON_BuildTests OFF CACHE INTERNAL "")
 add_subdirectory( ${CMAKE_CURRENT_SOURCE_DIR}/third_party/nlohmann_json_cmake_fetchcontent)
 
 
 ## Dependencies
 find_package(Eigen3 REQUIRED)
-find_package(Franka 0.7.0 REQUIRED)
+find_package(Franka 0.8.0 REQUIRED)
 find_package(Poco REQUIRED COMPONENTS Foundation Net)
 find_package(Boost 1.58.0 REQUIRED system thread)
 find_package(jsoncpp  REQUIRED)
@@ -72,11 +61,11 @@ target_link_libraries(joint_impedance_control Threads::Threads)
 target_link_libraries(motion_with_control Poco::Foundation)
 
 
-add_executable(udp_server src/communication/udp_server.cpp)
-target_link_libraries(udp_server ${Poco_LIBRARIES})
+# add_executable(udp_server src/communication/udp_server.cpp)
+# target_link_libraries(udp_server ${Poco_LIBRARIES})
 
-add_executable(udp_client src/communication/udp_client.cpp)
-target_link_libraries(udp_client ${Poco_LIBRARIES})
+# add_executable(udp_client src/communication/udp_client.cpp)
+# target_link_libraries(udp_client ${Poco_LIBRARIES})
 
 
 add_executable(udp_asio_client src/communication/udp_asio_client.cpp)
@@ -109,6 +98,13 @@ target_link_libraries(franka_slave
   nlohmann_json::nlohmann_json
   examples_common
 )
+
+add_executable(net_client src/net/net_client.cpp)
+target_link_libraries(net_client 
+  ${Franka_LIBRARIES} 
+  ${Boost_LIBRARIES}
+)
+
 
 
 

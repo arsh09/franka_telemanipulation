@@ -2,6 +2,7 @@
 
 #include "commons.h"
 
+
 namespace teleop
 {
 
@@ -21,9 +22,10 @@ namespace teleop
         // returns size of message
         size_t size() const
         {
-            return sizeof(message_header<T>) + body.size();
+            return  sizeof(message_header<T>) + body.size();
         }
 
+        
         friend std::ostream& operator<< (std::ostream& os, const message<T>& msg)
         {
             os << "ID: " << int( msg.header.id ) << " Size: " << msg.header.size;
@@ -31,26 +33,26 @@ namespace teleop
         }
 
         template <typename DataType>
-        friend message<T>& operator<< (message<T>& msg, const DataType& data)
+        friend message<T>& operator << (message<T>& msg, const DataType& data)
         {
             static_assert(std::is_standard_layout<DataType>::value , "Data is too complex to be pushed into the vector");
             size_t i = msg.body.size();
-            msg.body.resize(msg.body.size() + sizeof(DataType));
-            std::memcpy(msg.body.size() + i , &data, sizeof(DataType));
+            msg.body.resize ( msg.body.size() + sizeof(DataType));
+            std::memcpy(msg.body.data() + i , &data, sizeof(DataType));
             msg.header.size = msg.size();
             return msg;
         }
 
 
         template <typename DataType>
-        friend message<T>& operator>> (message<T>& msg, const DataType& data)
+        friend message<T>& operator >> (message<T>& msg, DataType& data)
         {
             static_assert(std::is_standard_layout<DataType>::value , "Data is too complex to be pushed into the vector");
             size_t i = msg.body.size() - sizeof(DataType);
-            std::memcpy( &data, msg.body.size() + i , sizeof(DataType));
-            msg.body.resize();
+            std::memcpy( &data, msg.body.data() + i , sizeof(DataType));
+            msg.body.resize(i);
             msg.header.size = msg.size();
-            return data;
+            return msg;
         }     
     };
 
