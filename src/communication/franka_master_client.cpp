@@ -85,6 +85,7 @@ public:
         {
             franka::RobotState fake_state;
             fake_state.q = {1,2,3,4,5,6,7};
+            _master_state = fake_state;
             do_send( fake_state );
             boost::this_thread::sleep( boost::posix_time::milliseconds(10) );
         }
@@ -214,10 +215,8 @@ public:
             if (!ec && bytes_recvd == received_bytes)
             {
                 // slave state received here (from slave).
-                std::cout << "[Master][Received][Bytes][" << master_endpoint << "]" << received_bytes << std::endl;
-                franka::RobotState _state;
-                msgIn >> _state;
-                print_array( _state.q );
+                if (debug) std::cout << "[Master][Received][Bytes][" << master_endpoint << "]" << received_bytes << std::endl;
+                msgIn >> _slave_state;
             }
             do_receive();
         });
@@ -235,7 +234,7 @@ public:
                 if ( !ec && bytes_sent == received_bytes )
                 {
                     // master state sent here (to slave).
-                    std::cout << "[Master][Sent][Bytes][" << slave_endpoint << "]" << bytes_sent << std::endl;
+                    if (debug) std::cout << "[Master][Sent][Bytes][" << slave_endpoint << "]" << bytes_sent << std::endl;
                 }             
             });
     }
@@ -263,6 +262,8 @@ private:
     std::size_t received_bytes = 3048;
     franka::RobotState _master_state; 
     franka::RobotState _slave_state;
+
+    bool debug = false;
 
     teleop::message<CustomType> msgIn;
     teleop::message<CustomType> msgOut;

@@ -66,6 +66,15 @@ public:
             fake_state.q = {fake_joint_values, fake_joint_values, fake_joint_values, fake_joint_values, fake_joint_values, fake_joint_values, fake_joint_values};
             fake_joint_values += 0.1;
             if (fake_joint_values > 1) fake_joint_values = 0.1;
+            
+            _slave_state = fake_state;
+
+            std::cout << "Joints: " ;
+            for ( int i = 0; i < _slave_state.q.size(); i++)
+            {
+                std::cout << _master_state.q.at(i) - _slave_state.q.at(i) << "  " ;
+            }
+            std::cout << std::endl;
 
             do_send( fake_state );
             boost::this_thread::sleep( boost::posix_time::milliseconds(10) );
@@ -164,7 +173,8 @@ public:
             if (!ec && bytes_recvd == received_bytes)
             {
                 // master state received here (from master)
-                std::cout << "[Slave][Received][Bytes][" << slave_endpoint << "]" << bytes_recvd << std::endl;
+                msgIn >> _master_state ;
+                if (debug) std::cout << "[Slave][Received][Bytes][" << slave_endpoint << "]" << bytes_recvd << std::endl;
             }
 
             do_receive();
@@ -183,7 +193,7 @@ public:
                 if ( !ec && bytes_sent == received_bytes )
                 {
                     // slave state message sent here (to master)
-                    std::cout << "[Slave][Sent][Bytes][" << slave_endpoint << "]" << bytes_sent << std::endl;
+                    if (debug) std::cout << "[Slave][Sent][Bytes][" << slave_endpoint << "]" << bytes_sent << std::endl;
                 }             
             });
     }
@@ -214,6 +224,9 @@ private:
     std::size_t received_bytes = 3048;
     teleop::message<CustomType> msgIn;
     teleop::message<CustomType> msgOut;
+    
+
+    bool debug = false;
 
 }; // end of client
 

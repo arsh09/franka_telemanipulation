@@ -58,6 +58,13 @@
         "memory": "cpp",
         "random": "cpp",
         "forward_list": "cpp",
-        "valarray": "cpp"
+        "valarray": "cpp",
+        "iterator": "cpp",
+        "map": "cpp",
+        "memory_resource": "cpp",
+        "optional": "cpp",
+        "set": "cpp",
+        "string": "cpp",
+        "string_view": "cpp"
     }
 }
