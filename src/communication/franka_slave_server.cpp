@@ -44,12 +44,18 @@ public:
         std::cout << "Tis is a UDP server" << std::endl;
         do_receive();
 
+        // single thread
         // boost::thread(boost::bind(&boost::asio::io_service::run, &io_service));
+        
+        // multiple threads
         for (unsigned i = 0; i < boost::thread::hardware_concurrency(); ++i)
             tg.create_thread(boost::bind(&boost::asio::io_service::run, &io_service));
         
-        // initialize_robot(slave_ip);
-        test_loop();
+        // if running without an actual robot
+        // test_loop();
+
+        // if running with a robt
+        initialize_robot(slave_ip);
     }
 
     ~server()
@@ -86,11 +92,11 @@ public:
         try 
         {
             franka::Robot robot(slave_ip);
+            setup_state_read_loop(robot);
             // setDefaultBehavior(robot);
             // setup_initial_pose(robot);
             // setup_position_control(robot);
 
-            setup_state_read_loop(robot);
         } 
         catch (franka::Exception const& e) 
         {
@@ -116,6 +122,7 @@ public:
         robot.read(  [this] (const franka::RobotState& robot_state) 
         {   
             _slave_state = robot_state;
+            do_send(_slave_state);
             return true;                
         });
     }

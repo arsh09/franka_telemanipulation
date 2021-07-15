@@ -46,13 +46,18 @@ public:
         // give some work to asio
         do_receive();
 
+        // single thread
         // boost::thread(boost::bind(&boost::asio::io_service::run, &io_service));  
+
+        // multiple threads 
         for (unsigned i = 0; i < boost::thread::hardware_concurrency(); ++i)
             tg.create_thread(boost::bind(&boost::asio::io_service::run, &io_service));
 
         
-        test_loop();
-        // initialize_robot(master_ip);
+        // if running without robots
+        // test_loop();
+
+        initialize_robot(master_ip);
     }
 
     ~client()
@@ -65,7 +70,7 @@ public:
         try 
         {
             franka::Robot robot(master_ip);
-            // setup_state_read_loop(robot);
+            setup_state_read_loop(robot);
             // setDefaultBehavior(robot);
             // setup_initial_pose(robot);
             // setup_compliance();
@@ -107,7 +112,7 @@ public:
     {
         robot.read(  [this] (const franka::RobotState& robot_state) 
         {   
-            // _master_state = robot_state;
+            _master_state = robot_state;
             do_send( robot_state );
             return true;
         });

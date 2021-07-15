@@ -13,7 +13,7 @@ add_subdirectory( ${CMAKE_CURRENT_SOURCE_DIR}/third_party/nlohmann_json_cmake_fe
 
 ## Dependencies
 find_package(Eigen3 REQUIRED)
-find_package(Franka 0.8.0 REQUIRED)
+find_package(Franka 0.7.0 REQUIRED)
 find_package(Poco REQUIRED COMPONENTS Foundation Net)
 find_package(Boost 1.58.0 REQUIRED system thread)
 find_package(jsoncpp  REQUIRED)
@@ -29,8 +29,6 @@ add_library(examples_common STATIC
   src/examples/examples_common.cpp
 )
 target_link_libraries(examples_common PUBLIC  ${Franka_LIBRARIES} )
-
-
 
 # build
 set(EXAMPLES
