@@ -70,12 +70,11 @@ public:
         try 
         {
             franka::Robot robot(master_ip);
-            setup_state_read_loop(robot);
-            // setDefaultBehavior(robot);
-            // setup_initial_pose(robot);
-            // setup_compliance();
-            // setup_impendance_control(robot);
-
+            // setup_state_read_loop(robot);
+            setDefaultBehavior(robot);
+            setup_initial_pose(robot);
+            setup_compliance();
+            setup_impendance_control(robot);
         } 
         catch (franka::Exception const& e) 
         {
@@ -113,10 +112,11 @@ public:
         robot.read(  [this] (const franka::RobotState& robot_state) 
         {   
             _master_state = robot_state;
-            print_array(_master_state.q, "Positions") ;
-            print_array(_master_state.dq, "Speeds") ;
-            print_array(_master_state.tau_J, "Torques") ;
             do_send( robot_state );
+
+            // print_array(_master_state.q, "Positions") ;
+            // print_array(_master_state.dq, "Speeds") ;
+            // print_array(_master_state.tau_J, "Torques") ;
             return true;
         });
     }
@@ -157,8 +157,10 @@ public:
             impedance_control_callback = [this, &model](const franka::RobotState& robot_state,
                                             franka::Duration /*duration*/) -> franka::Torques 
         {
+            // send state to slave robot
             _master_state = robot_state;
-            
+            do_send( robot_state );
+
             // get state variables
             std::array<double, 7> coriolis_array = model.coriolis(robot_state);
             std::array<double, 42> jacobian_array =
