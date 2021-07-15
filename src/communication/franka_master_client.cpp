@@ -223,8 +223,12 @@ public:
             if (!ec && bytes_recvd == received_bytes)
             {
                 // slave state received here (from slave).
-                if (debug) std::cout << "[Master][Received][Bytes][" << master_endpoint << "]" << received_bytes << std::endl;
+                msgIn.body.resize( bytes_recvd );
                 msgIn >> _slave_state;
+                if (debug) std::cout << "[Slave][Received][Bytes][" << slave_endpoint << "]\t" << bytes_recvd  << std::endl;
+                print_array( _master_state.q , "Position");
+                print_array( _master_state.dq , "Speeds");
+                print_array( _master_state.tau_J , "Torques");
             }
             do_receive();
         });

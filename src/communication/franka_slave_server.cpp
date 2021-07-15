@@ -187,7 +187,6 @@ public:
                 print_array( _master_state.dq , "Speeds");
                 print_array( _master_state.tau_J , "Torques");
             }
-
             do_receive();
         });
     }
