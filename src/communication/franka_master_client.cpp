@@ -22,23 +22,11 @@
 #include <franka/model.h>
 #include "examples_common.h"
 
-
-#include "udp_messages.h"
+#include "messages.h"
 
 #include <boost/thread.hpp>
 #include <boost/asio.hpp>
 using boost::asio::ip::udp;
-
-
-
-enum class CustomType : uint32_t
-{
-    RobotStateFull,
-    MasterJointsPosition,
-    SlaveJointsPosition,
-    MasterJointsVelociy,
-    SlaveJointsVelociy,
-};
 
 
 class client 
@@ -55,12 +43,13 @@ public:
         udp::resolver::query query( server_ip , server_port );
         slave_endpoint = *resolver.resolve( query );
         
-
         // give some work to asio
-        do_receive_header();
+        do_receive();
 
-        boost::thread(boost::bind(&boost::asio::io_service::run, &io_service));        
-        initialize_robot(master_ip);
+        boost::thread(boost::bind(&boost::asio::io_service::run, &io_service));  
+        
+        test_loop();
+        // initialize_robot(master_ip);
     }
 
     bool initialize_robot(char* master_ip)
@@ -68,8 +57,7 @@ public:
         try 
         {
             franka::Robot robot(master_ip);
-            setup_state_read_loop(robot);
-
+            // setup_state_read_loop(robot);
             // setDefaultBehavior(robot);
             // setup_initial_pose(robot);
             // setup_compliance();
@@ -80,6 +68,17 @@ public:
         {
             std::cout << e.what() << std::endl;
             return false;
+        }
+    }
+
+    void test_loop()
+    {
+        while (true)
+        {
+            franka::RobotState fake_state;
+            fake_state.q = {1,2,3,4,5,6,7};
+            do_send( fake_state );
+            boost::this_thread::sleep( boost::posix_time::milliseconds(10) );
         }
     }
 
@@ -100,7 +99,7 @@ public:
         robot.read(  [this] (const franka::RobotState& robot_state) 
         {   
             // _master_state = robot_state;
-            do_send_header( robot_state );
+            do_send( robot_state );
             return true;
         });
     }
@@ -194,74 +193,38 @@ public:
         robot.control(impedance_control_callback);
     }
 
-    void do_receive_header() 
+    void do_receive() 
     { 
+        msgIn.body.clear();
+        msgIn.header.size = msgIn.size();
+        msgIn.body.resize(received_bytes);
+
         socket_.async_receive_from(
-        boost::asio::buffer(&msgIn.header, sizeof(teleop::message_header<CustomType>)), master_endpoint,
+        boost::asio::buffer(msgIn.body.data(), msgIn.body.size()), master_endpoint,
         [this](boost::system::error_code ec, std::size_t bytes_recvd)
         {
-            if (!ec && bytes_recvd > 0)
+            if (!ec && bytes_recvd == received_bytes)
             {
-                if ( &msgIn.header.size > 0 )
-                {
-                    msgIn.body.resize(msgIn.header.size);
-                    do_receive_body();
-                }
+                // slave state received here (from slave).
+                std::cout << "[Master][Received][Bytes][" << master_endpoint << "]" << received_bytes << std::endl;
             }
-            else
-            {
-                do_receive_header();
-            } 
+            do_receive();
         });
     }
 
-    void do_receive_body() 
+    void do_send(const franka::RobotState& robot_state) 
     { 
-        socket_.async_receive_from(
-        boost::asio::buffer( msgIn.body.data(), msgIn.header.size ), master_endpoint,
-        [this](boost::system::error_code ec, std::size_t bytes_recvd)
-        {
-            if (!ec && bytes_recvd > 0)
-            {
-                if ( &msgIn.header.size > 0 )
-                {
-                    msgIn.body.resize(msgIn.header.size);
-                    deserialize( _slave_state, msgIn);
-                }
-            }
+        teleop::message<CustomType> msg;
+        msg.header.id = CustomType::RobotStateFull;
+        msg << robot_state;
 
-            do_receive_header();
-        });
-    }
-
-    void do_send_header(const franka::RobotState& robot_state) 
-    { 
-        msgOut.header.size = 0;
-        msgOut.body.clear();
-        
-        serialize(robot_state, msgOut);
-        socket_.async_send_to( boost::asio::buffer( &msgOut.header, sizeof(teleop::message_header<CustomType>)), slave_endpoint, [this](boost::system::error_code ec, std::size_t bytes_sent)
+        socket_.async_send_to( boost::asio::buffer( msg.body.data(), msg.body.size() ), slave_endpoint, 
+        [this](boost::system::error_code ec, std::size_t bytes_sent)
             {   
-                if ( !ec && bytes_sent > 0 )
+                if ( !ec && bytes_sent == received_bytes )
                 {
-                    if ( msgOut.header.size > 0 )
-                    {
-                        do_send_body();
-                    }
-                }             
-            });
-    }
-
-    void do_send_body() 
-    { 
-        socket_.async_send_to( boost::asio::buffer( msgOut.body.data(), msgOut.header.size ), slave_endpoint, [this](boost::system::error_code ec, std::size_t bytes_sent)
-            {   
-                if ( !ec && bytes_sent > 0 )
-                {
-                    if ( msgOut.header.size > 0 )
-                    {
-
-                    }
+                    // master state sent here (to slave).
+                    std::cout << "[Master][Sent][Bytes][" << slave_endpoint << "]" << bytes_sent << std::endl;
                 }             
             });
     }
@@ -276,109 +239,6 @@ public:
         std::cout << std::endl;
     }
 
-    // order matters 
-    void deserialize(  franka::RobotState& robot_state , teleop::message<CustomType>& msg)
-    {
-        // msg    >> robot_state.time.toMSec();
-        // msg    >> robot_state.robot_mode;
-        msg    >> robot_state.control_command_success_rate;
-        // msg    >> robot_state.last_motion_errors;
-        // msg    >> robot_state.current_errors;
-        msg    >> robot_state.dtheta;
-        msg    >> robot_state.theta;
-        msg    >> robot_state.O_ddP_EE_c ;
-        msg    >> robot_state.O_dP_EE_c;
-        msg    >> robot_state.O_T_EE_c;
-        msg    >> robot_state.O_dP_EE_d;
-        msg    >> robot_state.K_F_ext_hat_K;
-        msg    >> robot_state.O_F_ext_hat_K;
-        msg    >> robot_state.tau_ext_hat_filtered;
-        msg    >> robot_state.cartesian_collision;
-        msg    >> robot_state.joint_collision;
-        msg    >> robot_state.cartesian_contact;
-        msg    >> robot_state.joint_contact;
-        msg    >> robot_state.ddq_d;
-        msg    >> robot_state.dq_d;
-        msg    >> robot_state.q_d ;
-        msg    >> robot_state.dq;
-        msg    >> robot_state.q ;
-        msg    >> robot_state.dtau_J; 
-        msg    >> robot_state.tau_J_d;   
-        msg    >> robot_state.tau_J;
-        msg    >> robot_state.ddelbow_c; 
-        msg    >> robot_state.delbow_c ;
-        msg    >> robot_state.elbow_c;
-        msg    >> robot_state.elbow_d ;
-        msg    >> robot_state.elbow ;
-        msg    >> robot_state.I_total; 
-        msg    >> robot_state.F_x_Ctotal ; 
-        msg    >> robot_state.m_total;
-        msg    >> robot_state.I_load;
-        msg    >> robot_state.F_x_Cload; 
-        msg    >> robot_state.m_load ;
-        msg    >> robot_state.I_ee ;
-        msg    >> robot_state.F_x_Cee;
-        msg    >> robot_state.m_ee  ;
-        msg    >> robot_state.EE_T_K ;
-        msg    >> robot_state.F_T_EE  ;
-        msg    >> robot_state.NE_T_EE;
-        msg    >> robot_state.F_T_NE ;
-        msg    >> robot_state.O_T_EE_d;
-        msg    >> robot_state.O_T_EE  ;
-    }
-
-    // order matters 
-    void serialize( const franka::RobotState& robot_state , teleop::message<CustomType>& msg)
-    {
-    
-        msg    << robot_state.O_T_EE  ;
-        msg    << robot_state.O_T_EE_d;
-        msg    << robot_state.F_T_NE ;
-        msg    << robot_state.NE_T_EE;
-        msg    << robot_state.F_T_EE  ;
-        msg    << robot_state.EE_T_K;
-        msg    << robot_state.m_ee   ;
-        msg    << robot_state.F_x_Cee;
-        msg    << robot_state.I_ee ;
-        msg    << robot_state.m_load;
-        msg    << robot_state.F_x_Cload;  
-        msg    << robot_state.I_load;
-        msg    << robot_state.m_total;
-        msg    << robot_state.F_x_Ctotal;
-        msg    << robot_state.I_total   ;
-        msg    << robot_state.elbow;
-        msg    << robot_state.elbow_d;  
-        msg    << robot_state.elbow_c;
-        msg    << robot_state.delbow_c;
-        msg    << robot_state.ddelbow_c;   
-        msg    << robot_state.tau_J;
-        msg    << robot_state.tau_J_d;  
-        msg    << robot_state.dtau_J;
-        msg    << robot_state.q  ;
-        msg    << robot_state.dq;
-        msg    << robot_state.q_d; 
-        msg    << robot_state.dq_d;
-        msg    << robot_state.ddq_d;
-        msg    << robot_state.joint_contact;
-        msg    << robot_state.cartesian_contact;
-        msg    << robot_state.joint_collision;
-        msg    << robot_state.cartesian_collision;
-        msg    << robot_state.tau_ext_hat_filtered;
-        msg    << robot_state.O_F_ext_hat_K;
-        msg    << robot_state.K_F_ext_hat_K;
-        msg    << robot_state.O_dP_EE_d;
-        msg    << robot_state.O_T_EE_c;
-        msg    << robot_state.O_dP_EE_c;
-        msg    << robot_state.O_ddP_EE_c; 
-        msg    << robot_state.theta;
-        msg    << robot_state.dtheta;
-        // msg    << robot_state.current_errors;
-        // msg    << robot_state.last_motion_errors;
-        msg    << robot_state.control_command_success_rate;
-        // msg    << robot_state.robot_mode;
-        // msg    << robot_state.time.toMSec();
-    }
-
 private:
     // networking stuff
     udp::socket socket_;
@@ -387,6 +247,7 @@ private:
     int max_length = 8192;
     char send_data_[8192];
     char receive_data_[8192];
+    std::size_t received_bytes = 3048;
     franka::RobotState _master_state; 
     franka::RobotState _slave_state;
 
@@ -407,7 +268,6 @@ private:
 
 
 }; // end of client
-
 
 int main(int argc , char* argv[])
 {

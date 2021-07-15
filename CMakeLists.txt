@@ -99,13 +99,6 @@ target_link_libraries(franka_slave
   examples_common
 )
 
-add_executable(net_client src/net/net_client.cpp)
-target_link_libraries(net_client 
-  ${Franka_LIBRARIES} 
-  ${Boost_LIBRARIES}
-)
-
-
 
 
 # install
