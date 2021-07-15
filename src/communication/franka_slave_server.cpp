@@ -43,9 +43,18 @@ public:
         memset( receive_data_, 0, sizeof(receive_data_) );
         std::cout << "Tis is a UDP server" << std::endl;
         do_receive();
-        boost::thread(boost::bind(&boost::asio::io_service::run, &io_service));
+
+        // boost::thread(boost::bind(&boost::asio::io_service::run, &io_service));
+        for (unsigned i = 0; i < boost::thread::hardware_concurrency(); ++i)
+            tg.create_thread(boost::bind(&boost::asio::io_service::run, &io_service));
+        
         // initialize_robot(slave_ip);
         test_loop();
+    }
+
+    ~server()
+    {
+        tg.join_all();
     }
 
     void test_loop()
@@ -53,7 +62,11 @@ public:
         while (true)
         {
             franka::RobotState fake_state;
-            fake_state.q = {1,2,3,4,5,6,7};
+
+            fake_state.q = {fake_joint_values, fake_joint_values, fake_joint_values, fake_joint_values, fake_joint_values, fake_joint_values, fake_joint_values};
+            fake_joint_values += 0.1;
+            if (fake_joint_values > 1) fake_joint_values = 0.1;
+
             do_send( fake_state );
             boost::this_thread::sleep( boost::posix_time::milliseconds(10) );
         }
@@ -186,6 +199,8 @@ public:
     }
 
 private:
+    // networking stuff
+    boost::thread_group tg;
     udp::socket socket_;
     udp::endpoint slave_endpoint;
     int max_length = 8192;
@@ -193,6 +208,8 @@ private:
     char receive_data_[8192];
     franka::RobotState _master_state; 
     franka::RobotState _slave_state;
+
+    double fake_joint_values = 0.1;
 
     std::size_t received_bytes = 3048;
     teleop::message<CustomType> msgIn;

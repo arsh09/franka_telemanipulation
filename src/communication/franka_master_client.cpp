@@ -46,10 +46,18 @@ public:
         // give some work to asio
         do_receive();
 
-        boost::thread(boost::bind(&boost::asio::io_service::run, &io_service));  
+        // boost::thread(boost::bind(&boost::asio::io_service::run, &io_service));  
+        for (unsigned i = 0; i < boost::thread::hardware_concurrency(); ++i)
+            tg.create_thread(boost::bind(&boost::asio::io_service::run, &io_service));
+
         
         test_loop();
         // initialize_robot(master_ip);
+    }
+
+    ~client()
+    {
+        tg.join_all();
     }
 
     bool initialize_robot(char* master_ip)
@@ -207,6 +215,9 @@ public:
             {
                 // slave state received here (from slave).
                 std::cout << "[Master][Received][Bytes][" << master_endpoint << "]" << received_bytes << std::endl;
+                franka::RobotState _state;
+                msgIn >> _state;
+                print_array( _state.q );
             }
             do_receive();
         });
@@ -229,8 +240,9 @@ public:
             });
     }
 
-    void print_array(std::array<double, 7> &arr, std::string &name)
+    void print_array(std::array<double, 7> &arr)
     {   
+        std::string  name = "Joints";
         std::cout << name.c_str() << ":  " ;
         for ( int i = 0; i < arr.size(); i++ )
         {
@@ -241,6 +253,7 @@ public:
 
 private:
     // networking stuff
+    boost::thread_group tg;
     udp::socket socket_;
     udp::endpoint master_endpoint;
     udp::endpoint slave_endpoint;
