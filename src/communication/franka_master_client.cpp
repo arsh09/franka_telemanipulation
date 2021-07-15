@@ -70,12 +70,11 @@ public:
         try 
         {
             franka::Robot robot(master_ip);
-            setup_state_read_loop(robot);
-            // setDefaultBehavior(robot);
-            // setup_initial_pose(robot);
-            // setup_compliance();
-            // setup_impendance_control(robot);
-
+            // setup_state_read_loop(robot);
+            setDefaultBehavior(robot);
+            setup_initial_pose(robot);
+            setup_compliance();
+            setup_impendance_control(robot);
         } 
         catch (franka::Exception const& e) 
         {
@@ -117,6 +116,7 @@ public:
             // print_array(_master_state.dq, "Speeds") ;
             // print_array(_master_state.tau_J, "Torques") ;
             do_send( robot_state );
+
             return true;
         });
     }
@@ -157,48 +157,11 @@ public:
             impedance_control_callback = [this, &model](const franka::RobotState& robot_state,
                                             franka::Duration /*duration*/) -> franka::Torques 
         {
+            // send state to slave robot
             _master_state = robot_state;
-            
-            // get state variables
-            std::array<double, 7> coriolis_array = model.coriolis(robot_state);
-            std::array<double, 42> jacobian_array =
-                model.zeroJacobian(franka::Frame::kEndEffector, robot_state);
-
-            // convert to Eigen
-            Eigen::Map<const Eigen::Matrix<double, 7, 1> > coriolis(coriolis_array.data());
-            Eigen::Map<const Eigen::Matrix<double, 6, 7> > jacobian(jacobian_array.data());
-            Eigen::Map<const Eigen::Matrix<double, 7, 1> > q(robot_state.q.data());
-            Eigen::Map<const Eigen::Matrix<double, 7, 1> > dq(robot_state.dq.data());
-            Eigen::Affine3d transform(Eigen::Matrix4d::Map(robot_state.O_T_EE.data()));
-            Eigen::Vector3d position(transform.translation());
-            Eigen::Quaterniond orientation(transform.linear());
-
-            // compute error to desired equilibrium pose
-            // position error
-            Eigen::Matrix<double, 6, 1> error;
-            error.head(3) << position - position_d;
-
-            // orientation error
-            // "difference" quaternion
-            if (orientation_d.coeffs().dot(orientation.coeffs()) < 0.0) {
-            orientation.coeffs() << -orientation.coeffs();
-            }
-            Eigen::Quaterniond error_quaternion(orientation * orientation_d.inverse());
-            // convert to axis angle
-            Eigen::AngleAxisd error_quaternion_angle_axis(error_quaternion);
-            // compute "orientation error"
-            error.tail(3) << error_quaternion_angle_axis.axis() * error_quaternion_angle_axis.angle();
-
-            // compute control
-            Eigen::VectorXd tau_task(7), tau_d(7);
-
-            // Spring damper system with damping ratio=1
-            tau_task << jacobian.transpose() * (-stiffness * error - damping * (jacobian * dq));
-            tau_d << tau_task + coriolis;
-
-            std::array<double, 7> tau_d_array{};
-            Eigen::VectorXd::Map(&tau_d_array[0], 7) = tau_d;
-            return tau_d_array;
+            do_send( robot_state );
+            franka::Torques zero_torques{{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}};
+            return zero_torques;
         };
 
         // start real-time control loop

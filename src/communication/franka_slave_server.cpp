@@ -147,28 +147,14 @@ public:
 
             time += period.toSec();
             
-            // initial_position = robot_state.q_d;
-            // if (time == 0.0 ) 
-            // { 
-            //     initial_position = robot_sta te.q_d;
-            // }
-            // else
-            // {
-            //     initial_position = _master_state.q;
-            // }
-
-            franka::Torques output = {{
-                initial_position[0], initial_position[1], initial_position[2], 
-                initial_position[3], initial_position[4],  initial_position[5],
-                initial_position[6] 
-            }};
+            franka::Torques zero_torques{{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}};
 
             if (time >= 50.0) {
                 std::cout << std::endl << "Finished motion, shutting down example" << std::endl;
-                return franka::MotionFinished(output);
+                return franka::MotionFinished(zero_torques);
             }
 
-            return output;
+            return zero_torques;
         });
     }
 
