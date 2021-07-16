@@ -105,6 +105,29 @@ public:
         }
     }
 
+    void setup_state_read_loop(franka::Robot& robot)
+    {
+        robot.read(  [this] (const franka::RobotState& robot_state) 
+        {   
+            _slave_state = robot_state;
+            do_send(_slave_state);
+            
+            if (is_master_state_received)
+            {
+                double Kp = 0.1;
+                std::array<double, 7> desired ;
+                for ( int i = 0; i < _master_state.q.size(); i++)
+                {
+                    desired[i] = Kp * ( _master_state.q[i] - _slave_state.q[i] ) ;
+                }
+
+                print_array(desired, "After Kp: " );
+            }
+
+            return true;                
+        });
+    }
+
     void setup_initial_pose(franka::Robot& robot)
     {
         std::array<double, 7> q_goal = {{0, -M_PI_4, 0, -3 * M_PI_4, 0, M_PI_2, M_PI_4}};
@@ -115,16 +138,6 @@ public:
         std::cin.ignore();
         robot.control(motion_generator);
         std::cout << "Finished moving to initial joint configuration." << std::endl;   
-    }
-
-    void setup_state_read_loop(franka::Robot& robot)
-    {
-        robot.read(  [this] (const franka::RobotState& robot_state) 
-        {   
-            _slave_state = robot_state;
-            do_send(_slave_state);
-            return true;                
-        });
     }
 
     void setup_position_control(franka::Robot& robot)
@@ -140,7 +153,12 @@ public:
         std::array<double, 7> initial_position = {0, 0, 0, 0, 0, 0, 0};
         double time = 0.0;
 
-        robot.control([this, &initial_position, &time](const franka::RobotState& robot_state, franka::Duration period) -> franka::Torques 
+        std::cout << "WARNING: The robot will try to imitate master! "
+                << "Please make sure to have the user stop button at hand!" << std::endl
+                << "Press Enter to continue..." << std::endl;
+        std::cin.ignore();
+
+        robot.control([this, &initial_position, &time](const franka::RobotState& robot_state, franka::Duration period) -> franka::JointPositions 
         {
             _slave_state = robot_state;
             do_send(_slave_state);
@@ -149,12 +167,43 @@ public:
             
             franka::Torques zero_torques{{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}};
 
-            if (time >= 50.0) {
-                std::cout << std::endl << "Finished motion, shutting down example" << std::endl;
-                return franka::MotionFinished(zero_torques);
+            if ( !is_master_state_received )
+            {
+                initial_position = robot_state.q_d;
+            }
+            else
+            {
+                initial_position = _master_state.q;
+                // double Kp = 0.1;
+                // std::array<double, 7> desired ;
+                // for ( int i = 0; i < robot_state.q.size(); i++)
+                // {
+                //     initial_position[i] = Kp * _master_state.q[i] ;
+                // }
             }
 
-            return zero_torques;
+            // is_master_state_received = false;
+            // print_array(_master_state.q , "master: ");
+
+            franka::JointPositions output = {{
+                initial_position[0], initial_position[1], initial_position[2], 
+                initial_position[3], initial_position[4], initial_position[5],
+                initial_position[6] }};
+
+            // franka::Torques output_torque = {{
+            //      initial_position[0], initial_position[1], initial_position[2], 
+            //      initial_position[3], initial_position[4], initial_position[5], 
+            //      initial_position[6] 
+            //      }};
+
+
+        
+            if (time >= 50.0) {
+                std::cout << std::endl << "Finished motion, shutting down example" << std::endl;
+                return franka::MotionFinished(output);
+            }
+
+            return output;
         });
     }
 
@@ -173,6 +222,7 @@ public:
                 // master state received here (from master)
                 msgIn.body.resize( bytes_recvd );
                 msgIn >> _master_state;
+                is_master_state_received = true;
                 if (debug) std::cout << "[Slave][Received][Bytes][" << slave_endpoint << "]\t" << bytes_recvd  << std::endl;
                 // print_array( _master_state.q , "Position");
                 // print_array( _master_state.dq , "Speeds");
@@ -233,6 +283,7 @@ private:
     franka::RobotState _slave_state;
 
     double fake_joint_values = 0.1;
+    bool is_master_state_received = false;
 
     std::size_t received_bytes = 4096;
     teleop::message<CustomType> msgIn;

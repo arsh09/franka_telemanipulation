@@ -95,18 +95,6 @@ public:
         }
     }
  
-    void setup_initial_pose(franka::Robot& robot)
-    {
-        std::array<double, 7> q_goal = {{0, -M_PI_4, 0, -3 * M_PI_4, 0, M_PI_2, M_PI_4}};
-        MotionGenerator motion_generator(0.5, q_goal);
-        std::cout << "WARNING: The robot will move to a pre-configured pose! "
-                << "Please make sure to have the user stop button at hand!" << std::endl
-                << "Press Enter to continue..." << std::endl;
-        std::cin.ignore();
-        robot.control(motion_generator);
-        std::cout << "Finished moving to initial joint configuration." << std::endl;   
-    }
-
     void setup_state_read_loop(franka::Robot& robot)
     {
         robot.read(  [this] (const franka::RobotState& robot_state) 
@@ -119,6 +107,18 @@ public:
 
             return true;
         });
+    }
+
+    void setup_initial_pose(franka::Robot& robot)
+    {
+        std::array<double, 7> q_goal = {{0, -M_PI_4, 0, -3 * M_PI_4, 0, M_PI_2, M_PI_4}};
+        MotionGenerator motion_generator(0.5, q_goal);
+        std::cout << "WARNING: The robot will move to a pre-configured pose! "
+                << "Please make sure to have the user stop button at hand!" << std::endl
+                << "Press Enter to continue..." << std::endl;
+        std::cin.ignore();
+        robot.control(motion_generator);
+        std::cout << "Finished moving to initial joint configuration." << std::endl;   
     }
 
     void setup_compliance()
