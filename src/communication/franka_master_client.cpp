@@ -99,7 +99,7 @@ public:
     {
         std::array<double, 7> q_goal = {{0, -M_PI_4, 0, -3 * M_PI_4, 0, M_PI_2, M_PI_4}};
         MotionGenerator motion_generator(0.5, q_goal);
-        std::cout << "WARNING: This example will move the robot to a pre-configured pose! "
+        std::cout << "WARNING: The robot will move to a pre-configured pose! "
                 << "Please make sure to have the user stop button at hand!" << std::endl
                 << "Press Enter to continue..." << std::endl;
         std::cin.ignore();
