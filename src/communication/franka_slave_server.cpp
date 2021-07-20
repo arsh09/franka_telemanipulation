@@ -158,7 +158,7 @@ public:
                 << "Press Enter to continue..." << std::endl;
         std::cin.ignore();
 
-        robot.control([this, &initial_position, &time](const franka::RobotState& robot_state, franka::Duration period) -> franka::JointPositions 
+        robot.control([this, &initial_position, &time](const franka::RobotState& robot_state, franka::Duration period) -> franka::Torques 
         {
             _slave_state = robot_state;
             do_send(_slave_state);
@@ -171,7 +171,6 @@ public:
             {
                 initial_position = _master_state.q;
                 is_master_state_received = false;
-                // print_array( _master_state.q, "Master: ");
             }
 
             std::array<double, 7> q_goal = {
@@ -180,10 +179,16 @@ public:
                 initial_position[6]}
             };
 
-            // MotionGenerator _position_motion_generator(0.2, q_goal);
-            // franka::JointPositions output = _position_motion_generator.continuousOperation( robot_state, period );
+            double Kp = 0.01;
+            // std::vector<double> Kp = {0.1, 0.1, 0,1, 0.1, 0,1, 0.1, 0,1};
+            // std::vector<double> Kd = {0, 0, 0, 0, 0, 0, 0};
             
-            franka::JointPositions output  = {{initial_position[0], initial_position[1],
+            for (int i = 0; i < _master_state.q.size(); i++)
+            {
+                initial_position[i] = Kp * ( robot_state.q[i] - initial_position[i] ) ;
+            }
+
+            franka::Torques output  = {{initial_position[0], initial_position[1],
                                         initial_position[2], initial_position[3] ,
                                         initial_position[4] , initial_position[5],
                                         initial_position[6] }};
@@ -193,9 +198,25 @@ public:
                 std::cout << std::endl << "Finished motion, shutting down example" << std::endl;
                 return franka::MotionFinished(output);
             }
-
             return output;
         });
+
+    }   
+
+    franka::Torques control_callback(const franka::RobotState& robot_state, franka::Duration)
+    {
+
+    }
+
+    franka::JointPositions position_motion_generator_callback(const franka::RobotState& robot_state, franka::Duration)
+    {
+        // return position profiles
+    }
+
+    franka::JointVelocities velocity_motion_generator_callback(const franka::RobotState& robot_state, franka::Duration)
+    {
+        // return velocity profiles
+
     }
 
     void do_receive() 
