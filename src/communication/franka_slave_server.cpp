@@ -93,10 +93,10 @@ public:
         try 
         {
             franka::Robot robot(slave_ip);
-            setup_state_read_loop(robot);
-            // setDefaultBehavior(robot);
-            // setup_initial_pose(robot);
-            // setup_position_control(robot);
+            // setup_state_read_loop(robot);
+            setDefaultBehavior(robot);
+            setup_initial_pose(robot);
+            setup_position_control(robot);
         } 
         catch (franka::Exception const& e) 
         {
@@ -170,6 +170,8 @@ public:
             else
             {
                 initial_position = _master_state.q;
+                is_master_state_received = false;
+                // print_array( _master_state.q, "Master: ");
             }
 
             std::array<double, 7> q_goal = {
@@ -177,8 +179,15 @@ public:
                 initial_position[3], initial_position[4], initial_position[5], 
                 initial_position[6]}
             };
-            MotionGenerator _position_motion_generator(0.5, q_goal);
-            franka::JointPositions output = _position_motion_generator.continuousOperation(robot_state, period);
+
+            // MotionGenerator _position_motion_generator(0.2, q_goal);
+            // franka::JointPositions output = _position_motion_generator.continuousOperation( robot_state, period );
+            
+            franka::JointPositions output  = {{initial_position[0], initial_position[1],
+                                        initial_position[2], initial_position[3] ,
+                                        initial_position[4] , initial_position[5],
+                                        initial_position[6] }};
+
 
             if (time >= 50.0) {
                 std::cout << std::endl << "Finished motion, shutting down example" << std::endl;
