@@ -93,10 +93,10 @@ public:
         try 
         {
             franka::Robot robot(slave_ip);
-            // setup_state_read_loop(robot);
-            setDefaultBehavior(robot);
-            setup_initial_pose(robot);
-            setup_position_control(robot);
+            setup_state_read_loop(robot);
+            // setDefaultBehavior(robot);
+            // setup_initial_pose(robot);
+            // setup_position_control(robot);
         } 
         catch (franka::Exception const& e) 
         {
