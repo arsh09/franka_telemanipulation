@@ -162,11 +162,7 @@ public:
         {
             _slave_state = robot_state;
             do_send(_slave_state);
-
-            time += period.toSec();
             
-            franka::Torques zero_torques{{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}};
-
             if ( !is_master_state_received )
             {
                 initial_position = robot_state.q_d;
@@ -174,37 +170,23 @@ public:
             else
             {
                 initial_position = _master_state.q;
-                // double Kp = 0.1;
-                // std::array<double, 7> desired ;
-                // for ( int i = 0; i < robot_state.q.size(); i++)
-                // {
-                //     initial_position[i] = Kp * _master_state.q[i] ;
-                // }
             }
 
-            // is_master_state_received = false;
-            // print_array(_master_state.q , "master: ");
+            std::array<double, 7> q_goal = {
+                {initial_position[0], initial_position[1], initial_position[2], 
+                initial_position[3], initial_position[4], initial_position[5], 
+                initial_position[6]}
+            };
+            MotionGenerator _position_motion_generator(0.5, q_goal);
+            franka::JointPositions output = _position_motion_generator.continuousOperation(robot_state, period);
 
-            franka::JointPositions output = {{
-                initial_position[0], initial_position[1], initial_position[2], 
-                initial_position[3], initial_position[4], initial_position[5],
-                initial_position[6] }};
-
-            // franka::Torques output_torque = {{
-            //      initial_position[0], initial_position[1], initial_position[2], 
-            //      initial_position[3], initial_position[4], initial_position[5], 
-            //      initial_position[6] 
-            //      }};
-
-
-        
             if (time >= 50.0) {
                 std::cout << std::endl << "Finished motion, shutting down example" << std::endl;
                 return franka::MotionFinished(output);
             }
 
             return output;
-        }, true, 100.0);
+        });
     }
 
     void do_receive() 

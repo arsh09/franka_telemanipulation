@@ -111,6 +111,26 @@ void MotionGenerator::calculateSynchronizedValues() {
   }
 }
 
+franka::JointPositions MotionGenerator::continuousOperation( const franka::RobotState& robot_state, franka::Duration period) 
+{
+  time_ += period.toSec();
+
+  if (time_ == 0.0) {
+    q_start_ = Vector7d(robot_state.q_d.data());
+    delta_q_ = q_goal_ - q_start_;
+    calculateSynchronizedValues();
+  }
+
+  Vector7d delta_q_d;
+  bool motion_finished = calculateDesiredValues(time_, &delta_q_d);
+
+  std::array<double, 7> joint_positions;
+  Eigen::VectorXd::Map(&joint_positions[0], 7) = (q_start_ + delta_q_d);
+  franka::JointPositions output(joint_positions);
+  output.motion_finished = false; //motion_finished;
+  return output;  
+}
+
 franka::JointPositions MotionGenerator::operator()(const franka::RobotState& robot_state,
                                                    franka::Duration period) {
   time_ += period.toSec();
@@ -129,4 +149,5 @@ franka::JointPositions MotionGenerator::operator()(const franka::RobotState& rob
   franka::JointPositions output(joint_positions);
   output.motion_finished = motion_finished;
   return output;
+
 }
