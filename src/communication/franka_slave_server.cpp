@@ -151,6 +151,7 @@ public:
             {{20.0, 20.0, 20.0, 25.0, 25.0, 25.0}}, {{20.0, 20.0, 20.0, 25.0, 25.0, 25.0}});
 
         std::array<double, 7> initial_position = {0, 0, 0, 0, 0, 0, 0};
+        std::array<double, 7> current_position = {0, 0, 0, 0, 0, 0, 0};
         double time = 0.0;
 
         std::cout << "WARNING: The robot will try to imitate master! "
@@ -158,40 +159,33 @@ public:
                 << "Press Enter to continue..." << std::endl;
         std::cin.ignore();
 
-        robot.control([this, &initial_position, &time](const franka::RobotState& robot_state, franka::Duration period) -> franka::Torques 
+        robot.control([this, &current_position, &time](const franka::RobotState& robot_state, franka::Duration period) -> franka::Torques 
         {
             _slave_state = robot_state;
             do_send(_slave_state);
             
             if ( !is_master_state_received )
             {
-                initial_position = robot_state.q_d;
+                current_position = robot_state.q_d;
             }
             else
             {
-                initial_position = _master_state.q;
+                current_position = _master_state.q;
                 // is_master_state_received = false;
             }
 
-            std::array<double, 7> q_goal = {
-                {initial_position[0], initial_position[1], initial_position[2], 
-                initial_position[3], initial_position[4], initial_position[5], 
-                initial_position[6]}
-            };
-
-            // double Kp = 5;
             std::vector<double> Kp = {20, 20, 20, 20, 15, 15, 15};
-            // std::vector<double> Kd = {0, 0, 0, 0, 0, 0, 0};
+            std::vector<double> Kd = {0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1};
             
             for (int i = 0; i < _master_state.q.size(); i++)
             {
-                initial_position[i] = Kp[i] * ( initial_position[i] - robot_state.q[i] ) ;
+                current_position[i] = Kp[i] * ( current_position[i] - robot_state.q[i] )  + Kd[i] * robot_state.dq[i];
             }
 
-            franka::Torques output  = {{initial_position[0], initial_position[1],
-                                        initial_position[2], initial_position[3] ,
-                                        initial_position[4] , initial_position[5],
-                                        initial_position[6] }};
+            franka::Torques output  = {{current_position[0], current_position[1],
+                                        current_position[2], current_position[3] ,
+                                        current_position[4] , current_position[5],
+                                        current_position[6] }};
 
 
             if (time >= 50.0) {
