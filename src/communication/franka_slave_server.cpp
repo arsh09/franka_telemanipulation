@@ -170,7 +170,7 @@ public:
             else
             {
                 initial_position = _master_state.q;
-                is_master_state_received = false;
+                // is_master_state_received = false;
             }
 
             std::array<double, 7> q_goal = {
@@ -179,13 +179,13 @@ public:
                 initial_position[6]}
             };
 
-            double Kp = 0.01;
-            // std::vector<double> Kp = {0.1, 0.1, 0,1, 0.1, 0,1, 0.1, 0,1};
+            // double Kp = 5;
+            std::vector<double> Kp = {20, 20, 20, 20, 15, 15, 15};
             // std::vector<double> Kd = {0, 0, 0, 0, 0, 0, 0};
             
             for (int i = 0; i < _master_state.q.size(); i++)
             {
-                initial_position[i] = Kp * ( robot_state.q[i] - initial_position[i] ) ;
+                initial_position[i] = Kp[i] * ( initial_position[i] - robot_state.q[i] ) ;
             }
 
             franka::Torques output  = {{initial_position[0], initial_position[1],
