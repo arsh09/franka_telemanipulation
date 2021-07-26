@@ -2,13 +2,31 @@
 #pragma once
 
 #include "commons.h"
+#include "messages.h"
 
 namespace teleop
 {
     class NetworkServer {
         public:
-            NetworkServer();
-            ~NetworkServer() = default;
+            NetworkServer(boost::asio::io_service& io_service, short port);
+            ~NetworkServer();
     
+            franka::RobotState _master_state;
+            franka::RobotState _slave_state;
+            bool is_state_received = false;
+
+        private: 
+
+            void DoSend(const franka::RobotState& robot_state);
+            void DoReceive();
+            bool debug = false;
+
+            teleop::message<CustomType> msgIn;
+
+            // networking stuff
+            boost::thread_group tg;
+            udp::socket socket_;
+            udp::endpoint slave_endpoint;
+            std::size_t received_bytes = 4096;
     };
 }
