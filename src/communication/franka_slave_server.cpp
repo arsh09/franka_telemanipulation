@@ -174,8 +174,8 @@ public:
                 // is_master_state_received = false;
             }
 
-            std::vector<double> Kp = {20, 20, 20, 20, 15, 15, 15};
-            std::vector<double> Kd = {0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1};
+            std::vector<double> Kp = {30, 30, 30, 30, 15, 15, 15};
+            std::vector<double> Kd = {0.5, 0.5, 0.5, 0.5, 0.25, 0.25, 0.25};
             
             for (int i = 0; i < _master_state.q.size(); i++)
             {
