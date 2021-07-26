@@ -6,10 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include(CTest)
 enable_testing()
-
-set(JSON_BuildTests OFF CACHE INTERNAL "")
-add_subdirectory( ${CMAKE_CURRENT_SOURCE_DIR}/third_party/nlohmann_json_cmake_fetchcontent)
-
+ 
 
 ## Dependencies
 find_package(Eigen3 REQUIRED)
@@ -30,7 +27,8 @@ add_library(examples_common STATIC
 )
 target_link_libraries(examples_common PUBLIC  ${Franka_LIBRARIES} )
 
-# build
+
+# build franka example
 set(EXAMPLES
   cartesian_impedance_control
   communication_test
@@ -57,47 +55,33 @@ endforeach()
 
 target_link_libraries(joint_impedance_control Threads::Threads)
 target_link_libraries(motion_with_control Poco::Foundation)
+ 
 
-
-# add_executable(udp_server src/communication/udp_server.cpp)
-# target_link_libraries(udp_server ${Poco_LIBRARIES})
-
-# add_executable(udp_client src/communication/udp_client.cpp)
-# target_link_libraries(udp_client ${Poco_LIBRARIES})
-
-
-add_executable(udp_asio_client src/communication/udp_asio_client.cpp)
-target_link_libraries(udp_asio_client 
-  ${Franka_LIBRARIES} 
-  ${Boost_LIBRARIES}
-  nlohmann_json::nlohmann_json
+# build network examples
+set(EXTRA_NETWORK_EXAMPLES
+  udp_asio_client
+  udp_asio_server
 )
 
+foreach(network_ex ${EXTRA_NETWORK_EXAMPLES})
+  add_executable(${network_ex} src/extra/${network_ex}.cpp)
+  target_link_libraries(${network_ex} ${Franka_LIBRARIES} ${Boost_LIBRARIES} examples_common )
+endforeach()
+ 
 
-add_executable(udp_asio_server src/communication/udp_asio_server.cpp)
-target_link_libraries(udp_asio_server 
-  ${Franka_LIBRARIES} 
-  ${Boost_LIBRARIES}
-  nlohmann_json::nlohmann_json
-)
-
-add_executable(franka_master src/communication/franka_master_client.cpp)
+add_executable(franka_master src/teleop/franka_master_client.cpp)
 target_link_libraries(franka_master 
   ${Franka_LIBRARIES} 
   ${Boost_LIBRARIES}
-  nlohmann_json::nlohmann_json
   examples_common
 )
 
-add_executable(franka_slave src/communication/franka_slave_server.cpp)
+add_executable(franka_slave src/teleop/franka_slave_server.cpp)
 target_link_libraries(franka_slave 
   ${Franka_LIBRARIES} 
   ${Boost_LIBRARIES}
-  nlohmann_json::nlohmann_json
   examples_common
 )
-
-
 
 # install
 include(GNUInstallDirs)

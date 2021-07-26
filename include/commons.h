@@ -4,13 +4,27 @@
 #include <thread>
 #include <mutex>
 #include <deque>
-#include <optional>
 #include <vector>
 #include <iostream>
 #include <algorithm>
 #include <chrono>
 #include <cstdint>
 
-
+#include <boost/bind/bind.hpp>
+#include <boost/thread.hpp>
 #include <boost/asio.hpp>
 #include <boost/asio/buffer.hpp>
+
+#include <franka/robot_state.h>
+#include <franka/errors.h>
+#include <franka/duration.h>
+#include <franka/exception.h>
+
+
+enum class CustomType : uint32_t 
+{
+    RobotStateFull,
+    RobotPositionOnly,
+    RobotSpeedOnly,
+    RobotTorqueOnly,
+};
