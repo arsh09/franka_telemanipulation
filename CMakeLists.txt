@@ -27,6 +27,18 @@ add_library(examples_common STATIC
 )
 target_link_libraries(examples_common PUBLIC  ${Franka_LIBRARIES} )
 
+# custom library (network client) 
+add_library(network_client STATIC
+  src/teleop/network_client.cpp
+)
+target_link_libraries(network_client PUBLIC  ${Franka_LIBRARIES} ${Boost_LIBRARIES})
+
+# custom library (network client) 
+add_library(network_server STATIC
+  src/teleop/network_server.cpp
+)
+target_link_libraries(network_client PUBLIC  ${Franka_LIBRARIES} ${Boost_LIBRARIES})
+
 
 # build franka example
 set(EXAMPLES
@@ -56,7 +68,6 @@ endforeach()
 target_link_libraries(joint_impedance_control Threads::Threads)
 target_link_libraries(motion_with_control Poco::Foundation)
  
-
 # build network examples
 set(EXTRA_NETWORK_EXAMPLES
   udp_asio_client

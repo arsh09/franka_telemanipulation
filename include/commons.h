@@ -20,6 +20,8 @@
 #include <franka/duration.h>
 #include <franka/exception.h>
 
+using boost::asio::ip::udp;
+
 
 enum class CustomType : uint32_t 
 {
