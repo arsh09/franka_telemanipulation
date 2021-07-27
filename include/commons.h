@@ -15,6 +15,7 @@
 #include <boost/asio.hpp>
 #include <boost/asio/buffer.hpp>
 
+#include <franka/robot.h>
 #include <franka/robot_state.h>
 #include <franka/errors.h>
 #include <franka/duration.h>

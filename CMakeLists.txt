@@ -39,6 +39,20 @@ add_library(network_server STATIC
 )
 target_link_libraries(network_client PUBLIC  ${Franka_LIBRARIES} ${Boost_LIBRARIES})
 
+# custom library (network client) 
+add_library(follower STATIC
+  src/teleop/follower.cpp
+)
+target_link_libraries(follower PUBLIC  ${Franka_LIBRARIES} ${Boost_LIBRARIES} examples_common)
+
+# custom library (network client) 
+add_library(leader STATIC
+  src/teleop/leader.cpp
+  
+)
+target_link_libraries(leader PUBLIC  ${Franka_LIBRARIES} ${Boost_LIBRARIES} examples_common)
+
+
 
 # build franka example
 set(EXAMPLES
@@ -92,6 +106,19 @@ target_link_libraries(franka_slave
   ${Franka_LIBRARIES} 
   ${Boost_LIBRARIES}
   examples_common
+)
+
+
+add_executable(follower_franka src/follower_franka.cpp)
+target_link_libraries(follower_franka 
+  follower
+  network_server
+)
+
+add_executable(leader_franka src/leader_franka.cpp)
+target_link_libraries(leader_franka 
+  leader
+  network_client
 )
 
 # install

@@ -15,10 +15,10 @@ namespace teleop
             franka::RobotState _master_state;
             franka::RobotState _slave_state;
             bool is_state_received = false;
+            void DoSend(const franka::RobotState& robot_state);
 
         private: 
 
-            void DoSend(const franka::RobotState& robot_state);
             void DoReceive();
             bool debug = false;
 
