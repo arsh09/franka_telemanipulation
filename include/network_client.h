@@ -20,7 +20,7 @@ namespace teleop
         private: 
 
             void DoReceive();
-            bool debug = false;
+            bool debug = true;
 
             teleop::message<CustomType> msgIn;
 

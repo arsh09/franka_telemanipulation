@@ -69,7 +69,6 @@ void Leader::Read( std::function<bool(
         [this, &read_loop]( const franka::RobotState& robot_state)
         {
             // send state the other end 
-            // send state the other end 
             client.DoSend(robot_state);
             _master_state = robot_state;
             _slave_state = client._slave_state;

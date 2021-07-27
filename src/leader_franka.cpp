@@ -16,7 +16,7 @@ bool read_loop( franka::RobotState _fstate, franka::RobotState _lstate, franka::
     
     if (is_state)
     {
-        std::cout << "Follower and leader states are available" << std::endl;
+        std::cout << "Follower states are available" << std::endl;
     }
     // you can read state in this loop (if is_state is true) 
     return true;
