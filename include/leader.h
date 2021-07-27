@@ -18,6 +18,8 @@ namespace teleop
             franka::RobotState _slave_state;
             bool is_state_received = false;
 
+            void GoHome();
+            
             void Control(  std::function<franka::Torques( 
                         const franka::RobotState& _fstate,  const franka::RobotState& _lstate, 
                         franka::Duration period,  bool _is_leader_state_received )> control_loop

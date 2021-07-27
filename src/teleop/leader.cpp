@@ -37,6 +37,13 @@ void Leader::InitializeRobot()
     }
 }
 
+void Leader::GoHome()
+{
+    std::array<double, 7> q_goal = {{0, -M_PI_4, 0, -3 * M_PI_4, 0, M_PI_2, M_PI_4}};
+    MotionGenerator motion_generator(0.5, q_goal);
+    robot.control(motion_generator);
+}
+
 void Leader::Control( std::function<franka::Torques( 
     const franka::RobotState& _fstate,  const franka::RobotState& _lstate, 
     franka::Duration period,  bool _is_leader_state_received )> control_loop)
