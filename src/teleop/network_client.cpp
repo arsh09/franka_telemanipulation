@@ -51,7 +51,8 @@ void NetworkClient::DoReceive()
     boost::asio::buffer(msgIn.body.data(), msgIn.body.size()), master_endpoint,
     [this](boost::system::error_code ec, std::size_t bytes_recvd)
     {
-        if (!ec && bytes_recvd == received_bytes)
+
+        if (!ec)
         {
             msgIn.body.resize( bytes_recvd );
             msgIn >> _slave_state;
