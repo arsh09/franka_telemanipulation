@@ -14,6 +14,10 @@ franka::Torques control_loop( franka::RobotState _fstate, franka::RobotState _ls
 bool read_loop( franka::RobotState _fstate, franka::RobotState _lstate, franka::Duration _period, bool is_state)
 {
     
+    if (is_state)
+    {
+        std::cout << "Follower and leader states are available" << std::endl;
+    }
     // you can read state in this loop (if is_state is true) 
     return true;
 }
@@ -28,7 +32,7 @@ int main(int argc, char** argv)
     }
 
     teleop::Leader leader(argv[1], argv[2], argv[3]) ;
-    leader.Control(control_loop);
+    leader.Read(read_loop);
 
     std::cout << "Done" << std::endl;
     return 0;
