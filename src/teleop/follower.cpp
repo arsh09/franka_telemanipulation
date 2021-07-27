@@ -64,7 +64,7 @@ void Follower::Control( std::function<franka::Torques(
             franka::Torques _torques = control_loop(_slave_state, _master_state, period, is_state_received);
 
             franka::Torques zero_torques{{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}};
-            return zero_torques;
+            return _torques;
         }
     );
 
