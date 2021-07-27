@@ -6,20 +6,19 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include(CTest)
 enable_testing()
- 
 
 ## Dependencies
 find_package(Eigen3 REQUIRED)
 find_package(Franka 0.7.0 REQUIRED)
-find_package(Poco REQUIRED COMPONENTS Foundation Net)
 find_package(Boost 1.58.0 REQUIRED system thread)
-find_package(jsoncpp  REQUIRED)
 
 include_directories( ${Boost_INCLUDE_DIR} )
 include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/include )
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
+
+
 
 # custom library
 add_library(examples_common STATIC
@@ -33,19 +32,19 @@ add_library(network_client STATIC
 )
 target_link_libraries(network_client PUBLIC  ${Franka_LIBRARIES} ${Boost_LIBRARIES})
 
-# custom library (network client) 
+# custom library (network server) 
 add_library(network_server STATIC
   src/teleop/network_server.cpp
 )
 target_link_libraries(network_client PUBLIC  ${Franka_LIBRARIES} ${Boost_LIBRARIES})
 
-# custom library (network client) 
+# custom library (teleop follower) 
 add_library(follower STATIC
   src/teleop/follower.cpp
 )
 target_link_libraries(follower PUBLIC  ${Franka_LIBRARIES} ${Boost_LIBRARIES} examples_common)
 
-# custom library (network client) 
+# custom library (teleop leader) 
 add_library(leader STATIC
   src/teleop/leader.cpp
   
@@ -69,46 +68,29 @@ set(EXAMPLES
   grasp_object
   joint_impedance_control
   joint_point_to_point_motion
-  motion_with_control
   print_joint_poses
 )
 
 foreach(example ${EXAMPLES})
   add_executable(${example} src/examples/${example}.cpp)
-  target_link_libraries(${example} ${Franka_LIBRARIES} examples_common )
+  target_link_libraries( ${example} ${Franka_LIBRARIES} examples_common )
 endforeach()
 
-
 target_link_libraries(joint_impedance_control Threads::Threads)
-target_link_libraries(motion_with_control Poco::Foundation)
  
 # build network examples
 set(EXTRA_NETWORK_EXAMPLES
-  udp_asio_client
-  udp_asio_server
+  franka_master_client
+  franka_slave_server
 )
 
 foreach(network_ex ${EXTRA_NETWORK_EXAMPLES})
   add_executable(${network_ex} src/extra/${network_ex}.cpp)
   target_link_libraries(${network_ex} ${Franka_LIBRARIES} ${Boost_LIBRARIES} examples_common )
 endforeach()
- 
-
-add_executable(franka_master src/teleop/franka_master_client.cpp)
-target_link_libraries(franka_master 
-  ${Franka_LIBRARIES} 
-  ${Boost_LIBRARIES}
-  examples_common
-)
-
-add_executable(franka_slave src/teleop/franka_slave_server.cpp)
-target_link_libraries(franka_slave 
-  ${Franka_LIBRARIES} 
-  ${Boost_LIBRARIES}
-  examples_common
-)
 
 
+# example for telemanipulation library
 add_executable(follower_franka src/follower_franka.cpp)
 target_link_libraries(follower_franka 
   follower

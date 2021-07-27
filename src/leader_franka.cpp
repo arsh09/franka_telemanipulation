@@ -1,3 +1,9 @@
+/** 
+ * Muhammad Arshad 
+ * 26-July-2021
+ * See license file
+**/
+
 #include <iostream>
 #include "leader.h"
 
